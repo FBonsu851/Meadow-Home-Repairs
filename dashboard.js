@@ -24,7 +24,7 @@
       ["Urgent and open", open.filter((job) => job.priority === "Urgent").length, "stat-urgent"],
       ["Assigned to me", open.filter((job) => job.assignedTo && job.assignedTo.id === user.id).length, ""],
       ["Visits awaiting approval", open.filter((job) => job.appointment && job.appointment.status === "Awaiting manager approval").length, ""],
-      ["Checks overdue", tasks.filter((t) => MH.taskState(t).key === "overdue").length, "stat-overdue"],
+      ["Checks overdue or not recorded", tasks.filter((t) => ["overdue", "missing"].includes(MH.taskState(t).key)).length, "stat-overdue"],
       ["Checks due soon", tasks.filter((t) => MH.taskState(t).key === "soon").length, ""]
     ];
     document.querySelector("#stats").replaceChildren(...items.map(([label, value, cls]) => {
@@ -95,6 +95,7 @@
     });
     if (!taskGroups.children.length) taskGroups.append(el("p", "empty-state compact-empty", "No checks match this choice."));
     MH.ui.restoreOpenForm(taskGroups, openForm);
+    MH.registers.renderCertificates(document.querySelector("#cert-register"));
   }
 
   scope.addEventListener("change", () => renderBoard(true));

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#f6f1e6">
     <title>Maintenance dashboard · Meadow House</title>
@@ -12,7 +12,10 @@
     <script src="core.js"></script>
     <script src="logo-data.js" defer></script>
     <script src="reports.js" defer></script>
+    <script src="media.js" defer></script>
     <script src="ui.js" defer></script>
+    <script src="vendor/qrcode.js" defer></script>
+    <script src="registers.js" defer></script>
     <script src="dashboard.js" defer></script>
   </head>
   <body>
@@ -64,10 +67,17 @@
             </select>
           </label>
         </div>
-        <p class="section-copy">Gas, electrical, fire, water, lifting and resident safety checks. Book a date (the manager approves it), then record the check when done. Intervals are typical examples for this fictional demo.</p>
+        <p class="section-copy">Gas, electrical, fire, water, lifting and resident safety checks. Book a date (the manager approves it), then record the check and its certificate when done.</p>
         <div id="task-groups" class="task-groups"></div>
       </section>
-      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+
+      <section class="planned-section" aria-labelledby="certs-title">
+        <p class="eyebrow">COMPLIANCE</p>
+        <h2 id="certs-title" class="panel-title">Certificate register</h2>
+        <p class="section-copy">The latest certificate for each check that needs one. You are alerted 30 days before a certificate expires. Add a certificate with <strong>Record check done</strong>.</p>
+        <div id="cert-register"></div>
+      </section>
+      <footer class="page-footer">Meadow House Repairs &amp; Maintenance</footer>
     </main>
   </body>
 </html>

@@ -3,13 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#f6f1e6">
     <title>Announcements · Meadow House</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
     <link rel="stylesheet" href="styles.css">
     <script src="core.js"></script>
+    <script src="media.js" defer></script>
     <script src="ui.js" defer></script>
     <script src="announcements.js" defer></script>
   </head>
@@ -43,7 +44,7 @@
         <h2 id="list-title" tabindex="-1">Latest announcements</h2>
         <ol id="announcement-list" class="announcement-list"></ol>
       </section>
-      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+      <footer class="page-footer">Meadow House Repairs &amp; Maintenance</footer>
     </main>
   </body>
 </html>

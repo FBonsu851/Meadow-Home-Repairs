@@ -28,6 +28,27 @@
   });
   categoryInput.value = "Other";
 
+  const photosInput = $("#photos");
+  const photosError = $("#photos-error");
+  const safetyInput = $("#safety");
+
+  function renderSettings() {
+    const settings = MH.loadSettings();
+    $("#location-suggestions").replaceChildren(...settings.locations.map((room) => { const o = el("option"); o.value = room; return o; }));
+    const t = settings.targets.safety;
+    $("#safety-target").textContent = `The team aims to attend within ${MH.hoursText(t.attend)}.`;
+  }
+  renderSettings();
+
+  // Opened from a room QR code: the room is filled in for the person reporting.
+  const roomFromQr = (new URLSearchParams(location.search).get("location") || "").trim().slice(0, 80);
+  if (roomFromQr) {
+    locationInput.value = roomFromQr;
+    MH.ui.showBanner(`Reporting a repair in ${roomFromQr}. Describe the problem below.`, "info");
+    setTimeout(() => descriptionInput.focus(), 0);
+  }
+  photosInput.addEventListener("change", () => { photosError.textContent = ""; photosInput.removeAttribute("aria-invalid"); });
+
   function onDone(jobId, message) {
     renderAll(false);
     const root = confirmList.querySelector(`[data-owner-id="${CSS.escape(jobId)}"]`) ? confirmList : jobsList;
@@ -133,7 +154,7 @@
   descriptionInput.addEventListener("input", () => clearFieldError(descriptionInput, descriptionError));
   reporterInput.addEventListener("input", () => clearFieldError(reporterInput, reporterError));
 
-  reportForm.addEventListener("submit", (event) => {
+  reportForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     clearFieldError(descriptionInput, descriptionError);
     clearFieldError(reporterInput, reporterError);
@@ -157,25 +178,39 @@
       reporterInput.setAttribute("aria-invalid", "true");
       problems.push("reporter name");
     }
+    const files = [...photosInput.files];
+    const photoProblem = MH.media.checkFiles(files, { images: true });
+    if (photoProblem) {
+      photosError.textContent = photoProblem;
+      photosInput.setAttribute("aria-invalid", "true");
+      problems.push("photos");
+    }
     if (problems.length) {
       reportFeedback.className = "form-feedback is-error";
-      reportFeedback.textContent = `Repair not submitted. Please fix the ${problems.join(" and ")} above.`;
-      (description ? reporterInput : descriptionInput).focus();
+      reportFeedback.textContent = `Repair not submitted. Please fix the ${problems.join(" and ").replace(/ and (?=.* and )/g, ", ")} above.`;
+      (!description ? descriptionInput : !reporter ? reporterInput : photosInput).focus();
       return;
     }
 
+    const submit = reportForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
     let job;
     try {
+      const photos = files.length ? await MH.media.saveFiles(files, { kind: "report" }) : [];
       job = MH.addJob({
         description, reporter,
         priority: reportForm.querySelector('input[name="priority"]:checked').value,
         location: locationInput.value.trim(),
-        category: categoryInput.value
+        category: categoryInput.value,
+        safety: safetyInput.checked,
+        photos
       });
     } catch (error) {
       reportFeedback.className = "form-feedback is-error";
       reportFeedback.textContent = error.message;
       return;
+    } finally {
+      submit.disabled = false;
     }
     if (!job) return;
     reportForm.reset();
@@ -184,13 +219,14 @@
     statusFilter.value = "Recent";
     renderAll(false);
     reportFeedback.className = "form-feedback is-success";
-    reportFeedback.textContent = `Repair reported. Job ${job.id} was created with status New and ${job.priority} priority. The maintenance team can now see it.`;
+    reportFeedback.textContent = `Repair reported. Job ${job.id} was created with status New and ${job.priority} priority${job.safety ? " and marked as affecting resident safety" : ""}. The maintenance team has been alerted.`;
     MH.ui.showSaved(jobsList, job.id, `New job created: ${job.id} (${job.priority} priority).`);
   });
 
   statusFilter.addEventListener("change", () => renderAll(true));
 
-  MH.onExternalChange(() => {
+  MH.onExternalChange((key) => {
+    if (key === MH.KEYS.settings || key === null) renderSettings();
     renderAll(true);
     MH.ui.renderHeader();
     MH.ui.announce("The repair list was updated with the latest changes.");

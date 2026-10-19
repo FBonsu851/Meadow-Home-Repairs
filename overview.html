@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#f6f1e6">
     <title>Overview &amp; reports · Meadow House</title>
@@ -12,7 +12,10 @@
     <script src="core.js"></script>
     <script src="logo-data.js" defer></script>
     <script src="reports.js" defer></script>
+    <script src="media.js" defer></script>
     <script src="ui.js" defer></script>
+    <script src="vendor/qrcode.js" defer></script>
+    <script src="registers.js" defer></script>
     <script src="overview.js" defer></script>
   </head>
   <body>
@@ -27,7 +30,7 @@
         <div>
           <p class="eyebrow">OVERVIEW &amp; REPORTS</p>
           <h1 id="page-title">Maintenance at Meadow House</h1>
-          <p class="intro-copy">What has been done, how quickly, and which problems keep coming back. Download the report as a PDF (with the logo) or as a spreadsheet.</p>
+          <p class="intro-copy">What has been done, how quickly, what it cost and which problems keep coming back. Download reports as PDF or spreadsheet, or the full inspection evidence pack.</p>
         </div>
       </section>
 
@@ -44,6 +47,7 @@
         <div class="toolbar-actions">
           <button id="download-pdf" class="button button-primary" type="button">Download report (PDF)</button>
           <button id="download-csv" class="button button-secondary" type="button">Download spreadsheet (CSV)</button>
+          <button id="download-evidence" class="button button-secondary" type="button" hidden>Inspection evidence pack (PDF)</button>
         </div>
       </div>
       <p id="download-feedback" class="form-feedback" role="status" aria-live="polite"></p>
@@ -61,6 +65,31 @@
           <p class="section-copy">Time from the report to completion, for repairs completed in the report period.</p>
           <div id="turnaround-chart" class="hbar-chart"></div>
           <p id="speed-summary" class="speed-summary"></p>
+        </section>
+      </div>
+
+      <div class="overview-grid">
+        <section class="report-section" aria-labelledby="targets-title">
+          <h2 id="targets-title">Response targets</h2>
+          <p class="section-copy">How often repairs were attended and completed within the target time for their type.</p>
+          <div class="table-wrap">
+            <table class="data-table" id="targets-table">
+              <caption class="visually-hidden">Response targets</caption>
+              <thead><tr><th scope="col">Type of repair</th><th scope="col">Target</th><th scope="col">Repairs</th><th scope="col">Attended on time</th><th scope="col">Completed on time</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="report-section" aria-labelledby="spend-title">
+          <h2 id="spend-title">Repair spend</h2>
+          <p class="section-copy">Parts and labour recorded when jobs were completed in the report period.</p>
+          <div class="table-wrap">
+            <table class="data-table" id="spend-table">
+              <caption class="visually-hidden">Repair spend by type of problem</caption>
+              <thead><tr><th scope="col">Type of problem</th><th scope="col">Spend</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </section>
       </div>
 
@@ -91,16 +120,7 @@
           </table>
         </div>
       </section>
-
-      <section id="sample-section" class="report-section sample-section" aria-labelledby="sample-title" hidden>
-        <h2 id="sample-title">Demo data</h2>
-        <p class="section-copy">Load six months of fictional completed repairs and safety checks to see the charts and recurring issues working. You can remove them again at any time.</p>
-        <div class="toolbar-actions">
-          <button id="load-sample" class="button button-secondary" type="button">Load sample history</button>
-          <button id="remove-sample" class="button button-secondary" type="button">Remove sample history</button>
-        </div>
-      </section>
-      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+      <footer class="page-footer">Meadow House Repairs &amp; Maintenance</footer>
     </main>
   </body>
 </html>

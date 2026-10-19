@@ -47,7 +47,7 @@
       ["Urgent and open", open.filter((job) => job.priority === "Urgent").length, "stat-urgent"],
       ["Waiting for staff to confirm", jobs.filter((j) => j.status === "Completed" && j.confirmation && j.confirmation.status !== "Confirmed").length, ""],
       ["Recurring issues", recurring.size, "stat-overdue"],
-      ["Safety checks overdue", tasks.filter((t) => MH.taskState(t).key === "overdue").length, "stat-overdue"]
+      ["Checks overdue or not recorded", tasks.filter((t) => ["overdue", "missing"].includes(MH.taskState(t).key)).length, "stat-overdue"]
     ];
     $("#stats").replaceChildren(...items.map(([label, value, cls]) => {
       const li = el("li", `stat ${value > 0 ? cls : ""}`);
@@ -133,8 +133,20 @@
 
   $("#task-filter").addEventListener("change", () => renderChecks(true));
 
+  function renderRooms() {
+    MH.registers.renderRooms($("#rooms"), (message) => {
+      renderRooms();
+      const box = $("#rooms-feedback");
+      box.className = message ? "form-feedback is-success" : "form-feedback";
+      box.textContent = message;
+      if (message) MH.ui.announce(message);
+    });
+  }
+
   function refresh(keepForm = true) {
     renderStats();
+    MH.registers.renderCertificates($("#cert-register"));
+    if (!$("#rooms .inline-form input:focus")) renderRooms();
     renderAppointments(keepForm);
     renderChecks(keepForm);
   }

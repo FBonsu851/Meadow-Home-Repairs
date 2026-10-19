@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#f6f1e6">
     <title>Manager · Meadow House</title>
@@ -12,7 +12,10 @@
     <script src="core.js"></script>
     <script src="logo-data.js" defer></script>
     <script src="reports.js" defer></script>
+    <script src="media.js" defer></script>
     <script src="ui.js" defer></script>
+    <script src="vendor/qrcode.js" defer></script>
+    <script src="registers.js" defer></script>
     <script src="manager.js" defer></script>
   </head>
   <body>
@@ -36,6 +39,8 @@
       <div id="tabs" class="tabs" role="tablist" aria-label="Manager tasks">
         <button class="tab" role="tab" id="tab-appointments" aria-controls="panel-appointments" aria-selected="true">Visit dates</button>
         <button class="tab" role="tab" id="tab-checks" aria-controls="panel-checks" aria-selected="false" tabindex="-1">Safety checks</button>
+        <button class="tab" role="tab" id="tab-certs" aria-controls="panel-certs" aria-selected="false" tabindex="-1">Certificates</button>
+        <button class="tab" role="tab" id="tab-rooms" aria-controls="panel-rooms" aria-selected="false" tabindex="-1">Rooms &amp; QR codes</button>
       </div>
 
       <section id="panel-appointments" class="tab-panel" role="tabpanel" aria-labelledby="tab-appointments" tabindex="0">
@@ -58,11 +63,24 @@
             </select>
           </label>
         </div>
-        <p class="section-copy">Gas, electrical, fire, water, lifting and resident safety checks. Intervals are typical examples for this fictional demo; always follow your own risk assessments and current regulations.</p>
+        <p class="section-copy">Gas, electrical, fire, water, lifting and resident safety checks. Intervals follow common UK care home practice; adjust them to your own risk assessments and current regulations.</p>
         <div id="task-groups" class="task-groups"></div>
       </section>
 
-      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+      <section id="panel-certs" class="tab-panel" role="tabpanel" aria-labelledby="tab-certs" tabindex="0" hidden>
+        <h2 class="panel-title">Certificate register</h2>
+        <p class="section-copy">Gas Safety Record, EICR, LOLER and other certificates, with expiry dates. You and the maintenance team are alerted 30 days before a certificate expires. The full register is also in the inspection evidence pack (Overview &amp; reports).</p>
+        <div id="cert-register"></div>
+      </section>
+
+      <section id="panel-rooms" class="tab-panel" role="tabpanel" aria-labelledby="tab-rooms" tabindex="0" hidden>
+        <h2 class="panel-title">Rooms &amp; QR codes</h2>
+        <p class="section-copy">Print a QR code for each room and put it on the wall or door. Staff scan it with a phone or tablet camera, sign in, and the report form opens with the room already filled in. The room list also appears as suggestions on the report form.</p>
+        <p id="rooms-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        <div id="rooms"></div>
+      </section>
+
+      <footer class="page-footer">Meadow House Repairs &amp; Maintenance</footer>
     </main>
   </body>
 </html>

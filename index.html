@@ -3,13 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#f6f1e6">
     <title>Repairs · Meadow House</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
     <link rel="stylesheet" href="styles.css">
     <script src="core.js"></script>
+    <script src="media.js" defer></script>
     <script src="ui.js" defer></script>
     <script src="app.js" defer></script>
   </head>
@@ -74,19 +75,28 @@
                   <label for="location">Where is it? <span class="req">(optional)</span></label>
                   <input id="location" name="location" type="text" maxlength="80" list="location-suggestions" aria-describedby="location-hint">
                   <p id="location-hint" class="field-hint">For example: Kitchen, Room 12, Garden. This helps spot repeat problems.</p>
-                  <datalist id="location-suggestions">
-                    <option value="Kitchen"></option><option value="Lounge"></option><option value="Dining room"></option>
-                    <option value="Hallway"></option><option value="Garden"></option><option value="Laundry"></option>
-                    <option value="Bathroom 1"></option><option value="Bathroom 2"></option><option value="Office"></option>
-                  </datalist>
+                  <datalist id="location-suggestions"></datalist>
                 </div>
                 <div class="field">
                   <label for="category">Type of problem <span class="req">(optional)</span></label>
                   <select id="category" name="category"></select>
                 </div>
+                <div class="field field-wide">
+                  <label class="check-row" for="safety">
+                    <input id="safety" name="safety" type="checkbox" aria-describedby="safety-hint">
+                    <span><strong>This affects resident safety</strong>
+                    <small id="safety-hint">For example a call bell, hoist, bed, hot water, heating, a door or a trip hazard. <span id="safety-target"></span></small></span>
+                  </label>
+                </div>
+                <div class="field field-wide">
+                  <label for="photos">Photos <span class="req">(optional)</span></label>
+                  <input id="photos" name="photos" type="file" accept="image/*" multiple aria-describedby="photos-hint photos-error">
+                  <p id="photos-hint" class="field-hint">Up to 4 photos. On a phone or tablet you can take them with the camera.</p>
+                  <p class="field-error" id="photos-error"></p>
+                </div>
               </div>
               <div class="form-footer">
-                <p class="form-hint">The maintenance team and home manager will see your report straight away.</p>
+                <p class="form-hint">The maintenance team is alerted straight away. Urgent and safety repairs also alert the manager.</p>
                 <button class="button button-primary" type="submit"><span aria-hidden="true">＋</span> Report repair</button>
               </div>
               <p class="form-feedback" id="report-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -131,7 +141,7 @@
           <a class="text-link" href="announcements.html">Read announcements from the manager</a>
         </aside>
       </div>
-      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+      <footer class="page-footer">Meadow House Repairs &amp; Maintenance</footer>
     </main>
   </body>
 </html>

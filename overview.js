@@ -28,17 +28,19 @@
       .sort((a, b) => b.size - a.size);
     const completed = jobs.filter((j) => j.status === "Completed");
     const speed = MH.reports.turnaroundSummary(completed);
+    const targets = MH.reports.targetSummary(jobs);
+    const spend = MH.reports.spendSummary(jobs);
 
     const kpis = [
       ["Repairs reported", jobs.filter((j) => Date.parse(j.createdAt) >= ($("#period").value === "all" ? 0 : Date.now() - Number($("#period").value) * 86400000)).length, ""],
       ["Repairs completed", completed.length, ""],
       ["Completed within 2 days", `${speed.quickShare}%`, ""],
-      ["Still open", allJobs.filter((j) => j.status !== "Completed").length, ""],
+      ["Completed within target", targets.share === null ? "–" : `${targets.share}%`, ""],
       ["Recurring issues", groups.length, groups.length ? "stat-overdue" : ""],
-      ["Safety checks overdue", tasks.filter((t) => MH.taskState(t).key === "overdue").length, "stat-overdue"]
+      ["Repair spend", MH.formatMoney(spend.total), ""]
     ];
     $("#kpis").replaceChildren(...kpis.map(([label, value, cls]) => {
-      const li = el("li", `stat ${value && value !== "0%" ? cls : ""}`);
+      const li = el("li", `stat ${value && value !== "0%" && value !== "–" ? cls : ""}`);
       li.append(el("span", "stat-value", String(value)), el("span", "stat-label", label));
       return li;
     }));
@@ -48,6 +50,35 @@
     $("#speed-summary").textContent = speed.total
       ? `${speed.quickShare}% of ${MH.plural(speed.total, "completed repair")} were finished within two days of being reported.`
       : "No repairs were completed in this period yet.";
+
+    const settings = MH.loadSettings();
+    const pct = (met, known) => (known ? `${Math.round((met / known) * 100)}% (${met} of ${known})` : "–");
+    $("#targets-table tbody").replaceChildren(...Object.entries(targets.byClass).map(([cls, r]) => {
+      const tr = el("tr");
+      const t = settings.targets[cls];
+      [["Type of repair", MH.TARGET_LABELS[cls]], ["Target", `Attend ${MH.hoursText(t.attend)} · complete ${MH.hoursText(t.complete)}`], ["Repairs", String(r.jobs)],
+        ["Attended on time", pct(r.attendMet, r.attendKnown)], ["Completed on time", pct(r.completeMet, r.completeKnown)]]
+        .forEach(([label, value], i) => { const c = el(i ? "td" : "th", "", value); if (!i) c.scope = "row"; c.dataset.label = label; tr.append(c); });
+      return tr;
+    }));
+    const spendRows = spend.byType.length ? spend.byType : [];
+    $("#spend-table tbody").replaceChildren(...spendRows.map(([type, amount]) => {
+      const tr = el("tr");
+      const th = el("th", "", type);
+      th.scope = "row";
+      th.dataset.label = "Type of problem";
+      const td = el("td", "", MH.formatMoney(amount));
+      td.dataset.label = "Spend";
+      tr.append(th, td);
+      return tr;
+    }));
+    const totalRow = el("tr", "total-row");
+    const totalTh = el("th", "", spendRows.length ? "Total" : "No costs recorded in this period");
+    totalTh.scope = "row";
+    const totalTd = el("td", "", MH.formatMoney(spend.total));
+    totalTd.dataset.label = "Spend";
+    totalRow.append(totalTh, totalTd);
+    $("#spend-table tbody").append(totalRow);
 
     const recurringList = $("#recurring-list");
     recurringList.replaceChildren(...(groups.length ? groups.map((g) => {
@@ -120,17 +151,25 @@
     say(`Spreadsheet downloaded: ${MH.plural(jobs.length, "repair")} for ${periodLabel().toLowerCase()}.`);
   });
 
-  if (MH.can("data.sample")) {
-    $("#sample-section").hidden = false;
-    $("#load-sample").addEventListener("click", () => {
-      const result = MH.loadSampleHistory();
-      render();
-      MH.ui.showBanner(`Loaded ${result.count} fictional completed repairs and six months of safety checks.`, "success");
-    });
-    $("#remove-sample").addEventListener("click", () => {
-      MH.removeSampleHistory();
-      render();
-      MH.ui.showBanner("Sample history removed. Real records were not changed.", "success");
+  // Inspection evidence pack (home manager).
+  if (MH.can("evidence.export")) {
+    const evidence = $("#download-evidence");
+    evidence.hidden = false;
+    evidence.addEventListener("click", async () => {
+      evidence.disabled = true;
+      evidence.textContent = "Preparing evidence pack…";
+      try {
+        render();
+        const value = $("#period").value;
+        const sinceIso = value === "all" ? null : new Date(Date.now() - Number(value) * 86400000).toISOString();
+        await MH.reports.downloadEvidencePack({ sinceIso, periodLabel: periodLabel(), chartSvg });
+        say(`Evidence pack downloaded: meadow-house-evidence-pack-${MH.toInputDate(new Date())}.pdf (${periodLabel()}).`);
+      } catch (error) {
+        console.error(error);
+        say("The evidence pack could not be created. Please try again.", false);
+      }
+      evidence.disabled = false;
+      evidence.textContent = "Inspection evidence pack (PDF)";
     });
   }
 

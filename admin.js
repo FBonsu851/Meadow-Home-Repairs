@@ -294,7 +294,7 @@
     const report = MH.systemReport();
     const facts = [
       ["People with accounts", report.counts.users],
-      ["Repair jobs", `${report.counts.jobs}${report.counts.sampleJobs ? ` (${report.counts.sampleJobs} sample)` : ""}`],
+      ["Repair jobs", `${report.counts.jobs}${report.counts.sampleJobs ? ` (${report.counts.sampleJobs} training)` : ""}`],
       ["Announcements", report.counts.announcements],
       ["Security log entries", report.counts.audit],
       ["People signed in now", report.activeSessions],
@@ -305,6 +305,13 @@
       wrap.append(el("dt", "", label), el("dd", "", String(value)));
       return wrap;
     }));
+    if (MH.media) {
+      MH.media.usage().then((u) => {
+        const wrap = el("div", "detail");
+        wrap.append(el("dt", "", "Photos and certificate files"), el("dd", "", `${u.count} (${Math.round(u.bytes / 1024)} KB)`));
+        $("#system-facts").append(wrap);
+      }).catch(() => {});
+    }
   }
 
   $("#backup").addEventListener("click", () => {
@@ -365,13 +372,47 @@
   $("#load-sample").addEventListener("click", () => {
     const r = MH.loadSampleHistory();
     renderAll();
-    say("#system-feedback", `Loaded ${r.count} fictional completed repairs and six months of safety checks.`);
+    say("#system-feedback", `Training data added: ${r.count} example repairs and six months of safety checks. Remove it before going live.`);
   });
   $("#remove-sample").addEventListener("click", () => {
     MH.removeSampleHistory();
     renderAll();
-    say("#system-feedback", "Sample history removed. Real records were not changed.");
+    say("#system-feedback", "Training data removed. Real records were not changed.");
   });
+
+  /* ---------- Settings: web address and response targets ---------- */
+  function settingsForms() {
+    const settings = MH.loadSettings();
+    const urlForm = MH.ui.inlineForm({
+      ariaLabel: "System web address", submitText: "Save web address",
+      fields: [{ name: "url", type: "url", label: "Web address", maxLength: 300, value: settings.appUrl, autocomplete: "url", hint: MH.systemUrl() ? `QR codes currently use: ${MH.systemUrl()}` : "Not set yet – room QR codes can't be printed until it is." }],
+      onSubmit: (v) => {
+        const r = MH.setSystemUrl(v.url);
+        if (r.ok) { settingsForms(); say("#system-feedback", v.url ? `Web address saved: ${v.url}` : "Web address cleared."); }
+        return r;
+      },
+      onCancel: () => settingsForms()
+    });
+    $("#url-form-slot").replaceChildren(urlForm);
+
+    const fields = [];
+    Object.entries(MH.TARGET_LABELS).forEach(([key, label]) => {
+      fields.push({ name: `${key}-attend`, type: "number", label: `${label}: attend within (hours)`, required: true, optional: false, value: String(settings.targets[key].attend), min: "1", max: "2000", section: label });
+      fields.push({ name: `${key}-complete`, type: "number", label: `${label}: complete within (hours)`, required: true, optional: false, value: String(settings.targets[key].complete), min: "1", max: "4000" });
+    });
+    const targetsForm = MH.ui.inlineForm({
+      ariaLabel: "Response targets", submitText: "Save targets", fields,
+      onSubmit: (v) => {
+        const targets = {};
+        Object.keys(MH.TARGET_LABELS).forEach((key) => { targets[key] = { attend: Number(v[`${key}-attend`]), complete: Number(v[`${key}-complete`]) }; });
+        const r = MH.setTargets(targets);
+        if (r.ok) { settingsForms(); say("#system-feedback", "Response targets saved. They apply to all open and new repairs."); }
+        return r;
+      },
+      onCancel: () => settingsForms()
+    });
+    $("#targets-form-slot").replaceChildren(targetsForm);
+  }
 
   function renderAll() {
     renderStats();
@@ -387,6 +428,7 @@
   });
 
   coverForm();
+  settingsForms();
   let start = tabs[0];
   try { start = document.getElementById(sessionStorage.getItem("mh-admin-tab")) || tabs[0]; } catch (error) { /* ignore */ }
   selectTab(start, false);

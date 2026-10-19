@@ -1,7 +1,7 @@
 // Core data, identity & access management (IAM) and business rules for Meadow House.
 // Loaded as a classic script (not a module) so the app also works when opened from file://.
 //
-// SECURITY NOTE: this is a browser-only demo. Everything lives in this browser's local
+// DEPLOYMENT NOTE: this build runs entirely in the browser. Everything lives in this browser's local
 // storage, so the checks below raise the bar (hashed passwords, lockout, least privilege,
 // per-tab sessions, idle timeout, audit log) but cannot stop someone with full control of
 // the browser. A real deployment must enforce the same rules on a server.
@@ -16,7 +16,9 @@ window.MH = window.MH || {};
     users: "meadow-house-users-v2",
     sessions: "meadow-house-sessions-v1",
     announcements: "meadow-house-announcements-v1",
-    audit: "meadow-house-audit-v1"
+    audit: "meadow-house-audit-v1",
+    settings: "meadow-house-settings-v1",
+    alerts: "meadow-house-alerts-v1"
   };
   const TAB_TOKEN_KEY = "meadow-house-tab-session"; // sessionStorage: a session never leaks into another tab
   const HOUSE_NAME = "Meadow House";
@@ -55,7 +57,11 @@ window.MH = window.MH || {};
     "system.maintain": ["admin"],
     "directory.view": ["manager"],
     "reports.view": ["maintenance", "manager"],
-    "data.sample": ["manager", "admin"]
+    "data.sample": ["admin"],
+    "locations.manage": ["manager", "admin"],
+    "alerts.email": ["manager", "admin"],
+    "evidence.export": ["manager"],
+    "certificates.view": ["maintenance", "manager"]
   };
 
   const IDLE_LIMIT_MS = 15 * 60 * 1000;
@@ -74,7 +80,7 @@ window.MH = window.MH || {};
     { id: "u-felix-bonsu", name: "Felix Bonsu", email: "sgfbonsu@liverpool.ac.uk", role: "admin", salt: "+Nv8Hwmwt0K6XMmda6qZsg==", hash: "lSOqxXEyNWVyNCGk0DP8rcwzLiwle0JE5E09zsuued0=", iterations: 600000 },
     { id: "u-ethan-morton", name: "Ethan Morton", email: "sgemort2@liverpool.ac.uk", role: "maintenance", salt: "DH2FDNnChEfJr/Jeqp3EaA==", hash: "4+DZx1n3AHInDXBjMmQpB8By5N8iYbm7Q0rAACmMMm4=", iterations: 600000 }
   ];
-  // Fictional names used only inside the optional sample history.
+  // Example names used only inside the optional training data.
   const SAMPLE_REPORTERS = ["Alex Morgan", "Sam Patel", "Jo Lee"];
 
   let storageErrorHandler = (message) => console.error(message);
@@ -115,6 +121,7 @@ window.MH = window.MH || {};
   }
 
   function formatDate(value) {
+    if (value === null || value === undefined || value === "") return "Not recorded";
     const date = value instanceof Date ? value : (parseInputDate(value) || new Date(value));
     if (Number.isNaN(date.getTime())) return "Date unavailable";
     return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(date);
@@ -415,7 +422,7 @@ window.MH = window.MH || {};
     const result = checkSession();
     if (!result.ok) {
       if (result.reason !== "signed-out") endSession(result.reason);
-      location.replace(`login.html?next=${encodeURIComponent(page)}${result.reason === "signed-out" ? "" : `&reason=${result.reason}`}`);
+      location.replace(`login.html?next=${encodeURIComponent(page + location.search)}${result.reason === "signed-out" ? "" : `&reason=${result.reason}`}`);
       return null;
     }
     if (!pageAllowed(page, result.user.roles)) {
@@ -626,7 +633,7 @@ window.MH = window.MH || {};
     audit("Backup downloaded", "Jobs, safety checks, announcements and security log", "ok", actor);
     return {
       app: "meadow-house-repairs", version: 1, exportedAt: nowIso(), exportedBy: actor.name,
-      jobs: loadJobs(), tasks: loadTaskRecords(), announcements: loadAnnouncements(), audit: read(KEYS.audit, [])
+      jobs: loadJobs(), tasks: loadTaskRecords(), announcements: loadAnnouncements(), settings: read(KEYS.settings, {}), audit: read(KEYS.audit, [])
     };
   }
 
@@ -640,6 +647,7 @@ window.MH = window.MH || {};
     write(KEYS.jobs, jobs);
     write(KEYS.tasks, data.tasks);
     write(KEYS.announcements, data.announcements.filter((a) => a && typeof a.id === "string" && typeof a.title === "string"));
+    if (data.settings && typeof data.settings === "object") write(KEYS.settings, data.settings);
     audit("Backup restored", `${jobs.length} jobs from a backup made ${data.exportedAt ? formatDateTime(data.exportedAt) : "on an unknown date"}`, "ok", actor);
     return { ok: true, jobs: jobs.length };
   }
@@ -703,21 +711,33 @@ window.MH = window.MH || {};
     return { event, status, note: null, by: user ? user.name : undefined, role: user ? roleText(user) : undefined, timestamp: nowIso(), ...extra };
   }
 
-  function addJob({ description, reporter, priority, location, category }) {
+  function addJob({ description, reporter, priority, location, category, safety, photos }) {
     const user = authorize("job.report");
     const jobs = loadJobs();
     const createdAt = nowIso();
     const job = {
       id: newJobId(jobs), house: HOUSE_NAME, description, reporter, priority,
       location: location || "", category: CATEGORIES.includes(category) ? category : "Other",
-      source: "Staff report", status: "New", createdAt,
+      source: "Staff report", status: "New", createdAt, safety: Boolean(safety),
       assignedTo: null, appointment: null, attendedAt: null, completedAt: null, confirmation: null,
-      history: [{ ...historyEntry("Repair reported", "New", user), by: reporter, timestamp: createdAt }]
+      photos: photoMeta(photos, "report", user),
+      history: [{ ...historyEntry("Repair reported", "New", user), by: reporter, timestamp: createdAt, detail: safety ? "Affects resident safety" : undefined }]
     };
     jobs.push(job);
     if (!saveJobs(jobs)) return null;
-    audit("Repair reported", `${job.id} · ${priority}`, "ok", user);
+    audit("Repair reported", `${job.id} · ${priority}${safety ? " · resident safety" : ""}`, "ok", user);
+    const urgent = safety || priority === "Urgent";
+    createAlert({
+      level: urgent ? "urgent" : "info",
+      title: safety ? "Resident safety repair reported" : urgent ? "Urgent repair reported" : "New repair reported",
+      body: `${description}${location ? ` – ${location}` : ""} (${job.id}), reported by ${reporter}.`,
+      link: "maintenance.html", roles: urgent ? ["maintenance", "manager"] : ["maintenance"]
+    });
     return job;
+  }
+
+  function photoMeta(photos, kind, user) {
+    return (photos || []).map((p) => ({ id: p.id, name: p.name || "", kind, by: user ? user.name : undefined, at: nowIso() }));
   }
 
   // Always re-reads storage first so a change made in another tab is never overwritten.
@@ -740,6 +760,7 @@ window.MH = window.MH || {};
       job.assignedTo = assignee;
       job.history.push(historyEntry(`Assigned to ${assignee.name}`, job.status, user));
       audit("Job assigned", `${id} → ${assignee.name}`, "ok", user);
+      if (assignee.id !== user.id) createAlert({ title: "Job assigned to you", body: `${job.description} (${job.id})${job.location ? ` – ${job.location}` : ""}.`, link: "maintenance.html", userIds: [assignee.id] });
       return "";
     });
   }
@@ -754,6 +775,7 @@ window.MH = window.MH || {};
       job.history.push(historyEntry(rebook ? "Visit rebooked" : "Visit booked", "Scheduled", user, {
         note: note || null, detail: `Visit: ${formatAppointment(job.appointment)} · awaiting manager approval`
       }));
+      createAlert({ level: "warning", title: "Visit date to approve", body: `${job.description} (${job.id}) – ${formatAppointment(job.appointment)}, booked by ${user.name}.`, link: "manager.html", roles: ["manager"] });
       return "";
     });
   }
@@ -772,13 +794,20 @@ window.MH = window.MH || {};
         }));
       }
       audit(decision === "accept" ? "Visit accepted" : "Visit date changed", `${id} · ${formatAppointment(job.appointment)}`, "ok", user);
+      createAlert({
+        level: decision === "accept" ? "info" : "warning",
+        title: decision === "accept" ? "Visit date accepted" : "Visit date changed by the manager",
+        body: `${job.description} (${job.id}) – ${formatAppointment(job.appointment)}${decision === "accept" ? "" : `. Reason: ${reason}`}.`,
+        link: "maintenance.html", userIds: [job.assignedTo && job.assignedTo.id, userIdByName(job.reporter)]
+      });
       return "";
     });
   }
 
-  function startWork(id, note) {
+  function startWork(id, note, photos) {
     return changeJob(id, "job.work", (job, user) => {
       if (job.status === "Completed") return "This job is already completed.";
+      job.photos = [...(job.photos || []), ...photoMeta(photos, job.attendedAt ? "progress" : "before", user)];
       if (!job.attendedAt) job.attendedAt = nowIso();
       if (!job.assignedTo) job.assignedTo = publicUser(loadUsers().find((u) => u.id === user.id));
       job.history.push(historyEntry(job.status === "In Progress" ? "Progress note added" : "Team attended – work started", "In Progress", user, { note }));
@@ -787,15 +816,24 @@ window.MH = window.MH || {};
     });
   }
 
-  function completeJob(id, note) {
+  function completeJob(id, note, costs, photos) {
+    const parts = parseMoney(costs && costs.parts);
+    const labour = parseMoney(costs && costs.labour);
+    if (Number.isNaN(parts)) return { ok: false, field: "parts", error: "Enter the parts cost in pounds, for example 12.50." };
+    if (Number.isNaN(labour)) return { ok: false, field: "labour", error: "Enter the labour cost in pounds, for example 40." };
     return changeJob(id, "job.work", (job, user) => {
       if (job.status === "Completed") return "This job is already completed.";
       if (!job.attendedAt) job.attendedAt = nowIso();
       job.completedAt = nowIso();
       job.status = "Completed";
       job.confirmation = { status: "Awaiting staff confirmation" };
-      job.history.push(historyEntry("Marked Completed", "Completed", user, { note }));
+      job.costs = { parts, labour, contractor: String((costs && costs.contractor) || "").trim() };
+      job.photos = [...(job.photos || []), ...photoMeta(photos, "after", user)];
+      const total = parts + labour;
+      job.history.push(historyEntry("Marked Completed", "Completed", user, { note, detail: total || job.costs.contractor ? `Cost: ${formatMoney(total)}${job.costs.contractor ? ` · contractor: ${job.costs.contractor}` : ""}` : undefined }));
       audit("Job completed", id, "ok", user);
+      const reporterId = userIdByName(job.reporter);
+      createAlert({ title: "Please check a completed repair", body: `${job.description} (${job.id}) has been completed by ${user.name}. Please confirm it is fixed.`, link: "index.html", userIds: [reporterId], roles: reporterId ? [] : ["staff"] });
       return "";
     });
   }
@@ -813,6 +851,7 @@ window.MH = window.MH || {};
         job.confirmation = null;
         job.reopenCount = (job.reopenCount || 0) + 1;
         job.history.push(historyEntry("Reported as not fixed – reopened", "In Progress", user, { note }));
+        createAlert({ level: "urgent", title: "Repair reopened – not fixed", body: `${job.description} (${job.id}): ${note}`, link: "maintenance.html", roles: ["manager"], userIds: [job.assignedTo && job.assignedTo.id] });
       }
       audit(fixed ? "Completion confirmed" : "Job reopened", id, "ok", user);
       return "";
@@ -886,8 +925,8 @@ window.MH = window.MH || {};
 
   /* ---------- Planned maintenance (care home compliance checks) ---------- */
 
-  // Typical intervals for a UK care home, used as fictional demo data.
-  // seedOffset = how many days ago the last check happened when demo data is first created.
+  // Typical intervals for a UK care home. Nothing is assumed: a check has no "last done" date until one is recorded.
+  // seedOffset is only used by the optional training data.
   const TASK_TEMPLATES = [
     { id: "fire-alarm-weekly", name: "Fire alarm call-point test", category: "Fire safety", every: 7, unit: "day", seedOffset: -5, guidance: "Test a different call point each week and log the result." },
     { id: "fire-alarm-service", name: "Fire alarm system service", category: "Fire safety", every: 6, unit: "month", seedOffset: -170, guidance: "Inspection and service by a competent fire alarm engineer." },
@@ -935,25 +974,24 @@ window.MH = window.MH || {};
     return stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
   }
 
+  const emptyRecord = () => ({ lastDone: null, log: [], assignedTo: null, appointment: null, certificates: [] });
+
   function loadTasks() {
     const records = loadTaskRecords();
-    const today = new Date();
-    let seeded = false;
-    const tasks = TASK_TEMPLATES.map((template) => {
-      let record = records[template.id];
-      if (!record || !parseInputDate(record.lastDone) || !Array.isArray(record.log)) {
-        const lastDone = toInputDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + template.seedOffset));
-        record = { lastDone, log: [{ date: lastDone, by: "Previous contractor record", note: null, recordedAt: null }], assignedTo: null, appointment: null };
-        records[template.id] = record;
-        seeded = true;
-      }
-      return { ...template, lastDone: record.lastDone, log: record.log, assignedTo: record.assignedTo || null, appointment: record.appointment || null };
+    return TASK_TEMPLATES.map((template) => {
+      const record = records[template.id] || emptyRecord();
+      return {
+        ...template, certType: CERT_TYPES[template.id] || null,
+        certificates: Array.isArray(record.certificates) ? record.certificates : [],
+        lastDone: parseInputDate(record.lastDone) ? record.lastDone : null,
+        log: Array.isArray(record.log) ? record.log : [],
+        assignedTo: record.assignedTo || null, appointment: record.appointment || null
+      };
     });
-    if (seeded) write(KEYS.tasks, records);
-    return tasks;
   }
 
   function taskState(task) {
+    if (!task.lastDone) return { key: "missing", label: "Not recorded", detail: "Record the last check to start the schedule", due: null, days: -100000 };
     const due = addInterval(parseInputDate(task.lastDone), task.every, task.unit);
     const days = daysBetween(new Date(), due);
     const soonWindow = task.unit === "day" ? 2 : task.every <= 1 ? 7 : 30;
@@ -965,10 +1003,9 @@ window.MH = window.MH || {};
 
   function changeTask(id, permission, mutator) {
     const user = authorize(permission, id);
-    loadTasks(); // makes sure every record exists
+    if (!TASK_TEMPLATES.some((t) => t.id === id)) return { ok: false, error: "Check not found." };
     const records = loadTaskRecords();
-    const record = records[id];
-    if (!record) return { ok: false, error: "Check not found." };
+    const record = records[id] || (records[id] = emptyRecord());
     const problem = mutator(record, user);
     if (problem) return { ok: false, error: problem };
     if (!write(KEYS.tasks, records)) return { ok: false, error: "The check could not be saved." };
@@ -990,6 +1027,7 @@ window.MH = window.MH || {};
       record.appointment = { date, time: time || "", status: "Awaiting manager approval", proposedBy: user.name, proposedAt: nowIso() };
       if (!record.assignedTo) record.assignedTo = publicUser(loadUsers().find((u) => u.id === user.id));
       audit("Check booked", `${id} · ${formatAppointment(record.appointment)}`, "ok", user);
+      createAlert({ level: "warning", title: "Safety check date to approve", body: `${(TASK_TEMPLATES.find((t) => t.id === id) || {}).name} – ${formatAppointment(record.appointment)}, booked by ${user.name}.`, link: "manager.html", roles: ["manager"] });
       return "";
     });
   }
@@ -1007,13 +1045,27 @@ window.MH = window.MH || {};
     });
   }
 
-  function recordTask(id, date, note) {
+  function recordTask(id, date, note, cert) {
+    const hasCert = cert && Object.values(cert).some((v) => v);
+    if (hasCert) {
+      if (!String(cert.reference || "").trim()) return { ok: false, field: "reference", error: "Enter the certificate or report number." };
+      if (!parseInputDate(cert.expires)) return { ok: false, field: "expires", error: "Enter the date the certificate expires." };
+      if (cert.expires <= date) return { ok: false, field: "expires", error: "The expiry date must be after the date of the check." };
+    }
     return changeTask(id, "task.record", (record, user) => {
       if (parseInputDate(record.lastDone) && date < record.lastDone) return "This date is earlier than the last recorded check.";
       record.lastDone = date;
+      delete record.sampleLastDone;
       record.appointment = null;
       record.log = [...(record.log || []), { date, by: user.name, note: note || null, recordedAt: nowIso() }];
-      audit("Check recorded", `${id} · ${date}`, "ok", user);
+      if (hasCert) {
+        record.certificates = [...(record.certificates || []), {
+          id: `C-${randomHex(4).toUpperCase()}`, type: CERT_TYPES[id] || "Certificate", reference: cert.reference.trim(), issued: date, expires: cert.expires,
+          contractor: String(cert.contractor || "").trim(), registration: String(cert.registration || "").trim(),
+          fileId: cert.fileId || null, fileName: cert.fileName || "", recordedBy: user.name, recordedAt: nowIso()
+        }];
+      }
+      audit("Check recorded", `${id} · ${date}${hasCert ? ` · certificate ${cert.reference.trim()}` : ""}`, "ok", user);
       return "";
     });
   }
@@ -1049,6 +1101,8 @@ window.MH = window.MH || {};
     list.push(announcement);
     if (!write(KEYS.announcements, list)) return { ok: false, error: "The announcement could not be saved." };
     audit("Maintenance requested", `${job.id} · announcement ${announcement.id}`, "ok", user);
+    createAlert({ title: "New announcement", body: `${title} – ${formatAppointment(announcement)}${location ? ` · ${location}` : ""}.`, link: "announcements.html", roles: ["staff", "maintenance"] });
+    if (assignee) createAlert({ title: "Job assigned to you", body: `${title} (${job.id}) on ${formatAppointment(appointment)}.`, link: "maintenance.html", userIds: [assignee.id] });
     return { ok: true, job, announcement };
   }
 
@@ -1066,7 +1120,7 @@ window.MH = window.MH || {};
     return loadAnnouncements().filter((a) => !(a.readBy && a.readBy[user.id])).length;
   }
 
-  /* ---------- Sample history for the overview (manager only) ---------- */
+  /* ---------- Training data (administrator only) ---------- */
 
   function loadSampleHistory() {
     const user = authorize("data.sample");
@@ -1116,9 +1170,16 @@ window.MH = window.MH || {};
     });
     saveJobs(jobs);
 
-    // Monthly and weekly checks over the last six months, so the chart shows real activity.
-    loadTasks();
+    // Example safety check history, so trainees can see the schedule, chart and reminders working.
     const records = loadTaskRecords();
+    TASK_TEMPLATES.forEach((template) => {
+      const record = records[template.id] || (records[template.id] = emptyRecord());
+      if (!parseInputDate(record.lastDone)) {
+        record.lastDone = toInputDate(new Date(Date.now() + template.seedOffset * day));
+        record.sampleLastDone = true;
+        record.log = [...(record.log || []), { date: record.lastDone, by: "Training data", note: null, recordedAt: null, sample: true }];
+      }
+    });
     TASK_TEMPLATES.filter((t) => t.unit === "day" || t.every <= 3).forEach((template) => {
       const record = records[template.id];
       const step = template.unit === "day" ? template.every : template.every * 30;
@@ -1130,7 +1191,7 @@ window.MH = window.MH || {};
       record.log.sort((a, b) => a.date.localeCompare(b.date));
     });
     write(KEYS.tasks, records);
-    audit("Sample history loaded", `${samples.length} completed sample jobs`, "ok", user);
+    audit("Training data added", `${samples.length} example repairs and safety check history`, "ok", user);
     return { ok: true, count: samples.length };
   }
 
@@ -1138,10 +1199,249 @@ window.MH = window.MH || {};
     const user = authorize("data.sample");
     saveJobs(loadJobs().filter((job) => !job.sample));
     const records = loadTaskRecords();
-    Object.values(records).forEach((record) => { record.log = (record.log || []).filter((entry) => !entry.sample); });
+    Object.values(records).forEach((record) => {
+      record.log = (record.log || []).filter((entry) => !entry.sample);
+      if (record.sampleLastDone) {
+        const real = record.log[record.log.length - 1];
+        record.lastDone = real ? real.date : null;
+        delete record.sampleLastDone;
+      }
+    });
     write(KEYS.tasks, records);
-    audit("Sample history removed", "", "ok", user);
+    audit("Training data removed", "", "ok", user);
     return { ok: true };
+  }
+
+  /* ---------- Settings: rooms, response targets, system web address ---------- */
+
+  const DEFAULT_LOCATIONS = [
+    "Kitchen", "Lounge", "Dining room", "Hallway", "Laundry", "Garden", "Office", "Bathroom 1", "Bathroom 2",
+    ...Array.from({ length: 12 }, (_, i) => `Room ${i + 1}`)
+  ];
+  // Hours from the report to attending and to completing, by type of repair.
+  const DEFAULT_TARGETS = {
+    safety: { attend: 4, complete: 24 },
+    urgent: { attend: 24, complete: 72 },
+    normal: { attend: 72, complete: 336 }
+  };
+  const TARGET_LABELS = { safety: "Resident safety", urgent: "Urgent", normal: "Normal" };
+
+  function loadSettings() {
+    const stored = read(KEYS.settings, {}) || {};
+    const targets = {};
+    Object.keys(DEFAULT_TARGETS).forEach((key) => {
+      const s = stored.targets && stored.targets[key];
+      targets[key] = {
+        attend: s && Number(s.attend) > 0 ? Number(s.attend) : DEFAULT_TARGETS[key].attend,
+        complete: s && Number(s.complete) > 0 ? Number(s.complete) : DEFAULT_TARGETS[key].complete
+      };
+    });
+    const locations = Array.isArray(stored.locations) ? stored.locations.filter((l) => typeof l === "string" && l.trim()) : DEFAULT_LOCATIONS.slice();
+    return { appUrl: typeof stored.appUrl === "string" ? stored.appUrl : "", targets, locations };
+  }
+
+  function saveSettings(settings) {
+    return write(KEYS.settings, settings);
+  }
+
+  // The web address printed in room QR codes. Defaults to where the system is being used.
+  function systemUrl() {
+    const configured = loadSettings().appUrl;
+    if (configured) return configured.endsWith("/") ? configured : `${configured}/`;
+    if (/^https?:$/.test(location.protocol)) return location.href.replace(/[^/]*([?#].*)?$/, "");
+    return "";
+  }
+
+  function setSystemUrl(url) {
+    const actor = authorize("system.maintain", "set web address");
+    const clean = String(url || "").trim();
+    if (clean && !/^https:\/\/[^\s/$.?#].[^\s]*$/i.test(clean)) return { ok: false, field: "url", error: "Enter the full secure web address, starting with https://" };
+    const settings = loadSettings();
+    settings.appUrl = clean;
+    if (!saveSettings(settings)) return { ok: false, error: "The setting could not be saved." };
+    audit("Web address set", clean || "Cleared", "ok", actor);
+    return { ok: true };
+  }
+
+  function setTargets(targets) {
+    const actor = authorize("system.maintain", "change response targets");
+    const settings = loadSettings();
+    for (const key of Object.keys(DEFAULT_TARGETS)) {
+      const t = targets[key];
+      if (!t || !(t.attend > 0) || !(t.complete > 0) || t.attend > 2000 || t.complete > 4000) return { ok: false, field: `${key}-attend`, error: "Enter hours greater than 0." };
+      if (t.complete < t.attend) return { ok: false, field: `${key}-complete`, error: "The time to complete cannot be shorter than the time to attend." };
+      settings.targets[key] = { attend: Number(t.attend), complete: Number(t.complete) };
+    }
+    if (!saveSettings(settings)) return { ok: false, error: "The targets could not be saved." };
+    audit("Response targets changed", Object.entries(settings.targets).map(([k, t]) => `${TARGET_LABELS[k]}: ${t.attend}h / ${t.complete}h`).join(" · "), "ok", actor);
+    return { ok: true };
+  }
+
+  function addLocation(name) {
+    const actor = authorize("locations.manage", "add room");
+    const clean = String(name || "").trim().replace(/\s+/g, " ");
+    if (!clean) return { ok: false, field: "name", error: "Enter the room or area name." };
+    if (clean.length > 60) return { ok: false, field: "name", error: "Keep the name under 60 characters." };
+    const settings = loadSettings();
+    if (settings.locations.some((l) => l.toLowerCase() === clean.toLowerCase())) return { ok: false, field: "name", error: "That room is already on the list." };
+    settings.locations.push(clean);
+    if (!saveSettings(settings)) return { ok: false, error: "The room could not be saved." };
+    audit("Room added", clean, "ok", actor);
+    return { ok: true };
+  }
+
+  function removeLocation(name) {
+    const actor = authorize("locations.manage", "remove room");
+    const settings = loadSettings();
+    settings.locations = settings.locations.filter((l) => l !== name);
+    if (!saveSettings(settings)) return { ok: false, error: "The change could not be saved." };
+    audit("Room removed", name, "ok", actor);
+    return { ok: true };
+  }
+
+  /* ---------- Response targets ---------- */
+
+  const jobClass = (job) => (job.safety ? "safety" : job.priority === "Urgent" ? "urgent" : "normal");
+
+  function hoursText(hours) {
+    if (hours < 24) return plural(hours, "hour");
+    if (hours % 168 === 0) return plural(hours / 168, "week");
+    if (hours % 24 === 0) return plural(hours / 24, "day");
+    return plural(hours, "hour");
+  }
+
+  function responseTargets(job) {
+    const cls = jobClass(job);
+    const target = loadSettings().targets[cls];
+    const created = Date.parse(job.createdAt);
+    const attendBy = created + target.attend * 3600000;
+    const completeBy = created + target.complete * 3600000;
+    const { attended, completed } = jobTimes(job);
+    const state = (doneAt, by) => (doneAt ? (Date.parse(doneAt) <= by ? "met" : "missed") : (Date.now() > by ? "overdue" : "due"));
+    return {
+      cls, label: TARGET_LABELS[cls], attendText: hoursText(target.attend), completeText: hoursText(target.complete),
+      attendBy, completeBy, attend: state(attended, attendBy), complete: state(completed, completeBy)
+    };
+  }
+
+  /* ---------- Costs ---------- */
+
+  function parseMoney(value) {
+    if (value === undefined || value === null || String(value).trim() === "") return 0;
+    const n = Number(String(value).replace(/[£,\s]/g, ""));
+    return Number.isFinite(n) && n >= 0 && n <= 100000 ? Math.round(n * 100) / 100 : NaN;
+  }
+
+  const formatMoney = (n) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n || 0);
+  const jobCost = (job) => (job.costs ? (job.costs.parts || 0) + (job.costs.labour || 0) : 0);
+
+  /* ---------- Alerts ---------- */
+
+  function loadAlerts() {
+    const list = read(KEYS.alerts, []);
+    return Array.isArray(list) ? list.filter((a) => a && typeof a.id === "string") : [];
+  }
+
+  const userIdByName = (name) => (loadUsers().find((u) => normaliseName(u.name) === normaliseName(name)) || {}).id;
+
+  // audience: roles and/or userIds. key prevents the same alert being raised twice.
+  function createAlert({ level = "info", title, body, link, roles = [], userIds = [], key }) {
+    const list = loadAlerts();
+    if (key && list.some((a) => a.key === key)) return;
+    list.push({ id: `N-${randomHex(5)}`, at: nowIso(), level, title, body, link, roles, userIds: userIds.filter(Boolean), key: key || null, readBy: {} });
+    if (list.length > 400) list.splice(0, list.length - 400);
+    write(KEYS.alerts, list);
+  }
+
+  function alertsFor(user) {
+    if (!user) return [];
+    return loadAlerts().filter((a) => a.userIds.includes(user.id) || a.roles.some((r) => user.roles.includes(r)))
+      .sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  function markAlertsRead(ids) {
+    const user = currentUser();
+    if (!user) return;
+    const list = loadAlerts();
+    list.forEach((a) => { if (ids.includes(a.id) && !a.readBy[user.id]) a.readBy[user.id] = nowIso(); });
+    write(KEYS.alerts, list);
+  }
+
+  // Email addresses of everyone an alert is meant for (managers and admins only).
+  function alertRecipients(alert) {
+    authorize("alerts.email");
+    return loadUsers().filter((u) => !u.disabled && u.email && (alert.userIds.includes(u.id) || alert.roles.some((r) => effectiveRoles(u).includes(r))))
+      .map((u) => u.email);
+  }
+
+  // Raised whenever a page opens: safety checks due, certificates expiring, repairs past target.
+  function runScheduledChecks() {
+    const last = Number(sessionStorage.getItem("mh-last-scan") || 0);
+    if (Date.now() - last < 10 * 60000) return;
+    try { sessionStorage.setItem("mh-last-scan", String(Date.now())); } catch (error) { /* ignore */ }
+    loadTasks().forEach((task) => {
+      const s = taskState(task);
+      if (s.key === "missing") {
+        // nothing to remind about until a first date is recorded
+      } else if (s.key === "overdue") {
+        createAlert({ level: "urgent", title: "Safety check overdue", body: `${task.name} was due ${formatDate(s.due)}.`, link: "maintenance.html", roles: ["maintenance", "manager"], key: `task-overdue:${task.id}:${task.lastDone}` });
+      } else if (s.days <= 7) {
+        createAlert({ level: "warning", title: "Safety check due soon", body: `${task.name} is due ${formatDate(s.due)}.`, link: "maintenance.html", roles: ["maintenance", "manager"], key: `task-soon:${task.id}:${task.lastDone}` });
+      }
+      const cert = task.certificates[task.certificates.length - 1];
+      if (cert) {
+        const c = certificateState(cert);
+        if (c.key !== "valid") {
+          createAlert({ level: c.key === "expired" ? "urgent" : "warning", title: c.key === "expired" ? "Certificate expired" : "Certificate expiring soon", body: `${cert.type} (${cert.reference}) ${c.key === "expired" ? "expired" : "expires"} ${formatDate(cert.expires)}.`, link: "manager.html", roles: ["maintenance", "manager"], key: `cert:${cert.id}:${c.key}` });
+        }
+      }
+    });
+    loadJobs().filter((job) => job.status !== "Completed").forEach((job) => {
+      const t = responseTargets(job);
+      ["attend", "complete"].forEach((stage) => {
+        if (t[stage] === "overdue") {
+          createAlert({ level: "urgent", title: `Repair past its ${stage === "attend" ? "attendance" : "completion"} target`, body: `${job.description} (${job.id}) – ${t.label} target: ${stage === "attend" ? `attend within ${t.attendText}` : `complete within ${t.completeText}`}.`, link: "maintenance.html", roles: ["manager"], userIds: [job.assignedTo && job.assignedTo.id], key: `target:${job.id}:${stage}` });
+        }
+      });
+    });
+  }
+
+  /* ---------- Certificates ---------- */
+
+  const CERT_TYPES = {
+    "gas-safety": "Gas Safety Record (CP12)", "boiler-service": "Boiler service record", eicr: "Electrical Installation Condition Report (EICR)",
+    pat: "PAT test certificate", "nurse-call": "Nurse call service record", "fire-alarm-service": "Fire alarm service certificate",
+    "emergency-lighting-annual": "Emergency lighting test certificate", "fire-extinguishers": "Fire extinguisher service certificate",
+    "fire-risk-assessment": "Fire risk assessment", "legionella-ra": "Legionella risk assessment", "tmv-service": "TMV service record",
+    "lift-loler": "LOLER thorough examination report", "hoist-loler": "LOLER thorough examination report",
+    asbestos: "Asbestos management survey / register", "kitchen-extract": "Ductwork cleaning certificate (TR19)"
+  };
+
+  function certificateState(cert) {
+    const expires = parseInputDate(cert.expires);
+    const days = expires ? daysBetween(new Date(), expires) : -1;
+    if (days < 0) return { key: "expired", label: "Expired", detail: `Expired ${plural(-days, "day")} ago`, days };
+    if (days <= 30) return { key: "expiring", label: "Expires soon", detail: `Expires in ${plural(days, "day")}`, days };
+    return { key: "valid", label: "Valid", detail: `Valid for ${plural(days, "day")}`, days };
+  }
+
+  function listCertificates() {
+    authorize("certificates.view");
+    const rows = [];
+    loadTasks().forEach((task) => {
+      task.certificates.forEach((cert, index) => rows.push({ ...cert, taskId: task.id, taskName: task.name, category: task.category, current: index === task.certificates.length - 1 }));
+    });
+    return rows;
+  }
+
+  /* ---------- Inspection evidence ---------- */
+
+  function evidenceData(sinceIso) {
+    const actor = authorize("evidence.export");
+    audit("Evidence pack downloaded", sinceIso ? `From ${formatDate(sinceIso)}` : "All records", "ok", actor);
+    const since = sinceIso ? Date.parse(sinceIso) : 0;
+    const jobs = loadJobs().filter((job) => Date.parse(job.createdAt) >= since);
+    return { jobs, allJobs: loadJobs(), tasks: loadTasks(), certificates: listCertificates(), announcements: loadAnnouncements(), settings: loadSettings() };
   }
 
   /* ---------- Live updates between open tabs ---------- */
@@ -1152,7 +1452,7 @@ window.MH = window.MH || {};
         const result = checkSession();
         if (!result.ok && currentPage() !== "login.html") { signOut(result.reason); return; }
       }
-      if ([KEYS.jobs, KEYS.tasks, KEYS.announcements, null].includes(event.key)) handler(event.key);
+      if ([KEYS.jobs, KEYS.tasks, KEYS.announcements, KEYS.settings, null].includes(event.key)) handler(event.key);
     });
   }
 
@@ -1166,7 +1466,10 @@ window.MH = window.MH || {};
     loadJobs, addJob, assignJob, bookVisit, decideVisit, startWork, completeJob, confirmJob, jobTimes, turnaround, findRecurring,
     loadTasks, taskState, frequencyLabel, assignTask, bookTask, decideTask, recordTask,
     loadAnnouncements, requestMaintenance, markAnnouncementRead, unreadAnnouncements,
-    loadSampleHistory, removeSampleHistory, onExternalChange
+    loadSampleHistory, removeSampleHistory, onExternalChange,
+    loadSettings, systemUrl, setSystemUrl, setTargets, addLocation, removeLocation, TARGET_LABELS, responseTargets, hoursText,
+    parseMoney, formatMoney, jobCost, alertsFor, markAlertsRead, alertRecipients, runScheduledChecks,
+    certificateState, listCertificates, evidenceData
   });
 
   // Pages other than the sign-in page check access before anything is drawn.

@@ -325,7 +325,7 @@
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(79, 93, 85);
-      doc.text(`Meadow House · ${label} · Fictional demo data · Confidential`, 12, pageH - 7);
+      doc.text(`Meadow House Repairs & Maintenance · ${label} · Confidential`, 12, pageH - 7);
       doc.text(`Page ${i} of ${pages}`, pageW - 12, pageH - 7, { align: "right" });
     }
   }
@@ -346,6 +346,43 @@
     return "";
   }
 
+  function targetText(job) {
+    const t = MH.responseTargets(job);
+    const word = { met: "met", missed: "missed", overdue: "overdue", due: "on track" };
+    return `${t.label}: attend ${word[t.attend]}, complete ${word[t.complete]}`;
+  }
+
+  // Share of jobs that met each target (only jobs where the outcome is known).
+  function targetSummary(jobs) {
+    const result = {};
+    Object.keys(MH.TARGET_LABELS).forEach((cls) => { result[cls] = { jobs: 0, attendMet: 0, attendKnown: 0, completeMet: 0, completeKnown: 0 }; });
+    let met = 0, known = 0;
+    jobs.forEach((job) => {
+      const t = MH.responseTargets(job);
+      const r = result[t.cls];
+      r.jobs += 1;
+      if (t.attend === "met" || t.attend === "missed" || t.attend === "overdue") { r.attendKnown += 1; if (t.attend === "met") r.attendMet += 1; }
+      if (t.complete === "met" || t.complete === "missed" || t.complete === "overdue") {
+        r.completeKnown += 1; known += 1;
+        if (t.complete === "met") { r.completeMet += 1; met += 1; }
+      }
+    });
+    return { byClass: result, share: known ? Math.round((met / known) * 100) : null, known };
+  }
+
+  function spendSummary(jobs) {
+    const byType = new Map();
+    let total = 0;
+    jobs.forEach((job) => {
+      const cost = MH.jobCost(job);
+      if (!cost) return;
+      total += cost;
+      const key = job.category || "Other";
+      byType.set(key, (byType.get(key) || 0) + cost);
+    });
+    return { total, byType: [...byType.entries()].sort((a, b) => b[1] - a[1]) };
+  }
+
   function jobRow(job, recurring) {
     const times = MH.jobTimes(job);
     const speed = MH.turnaround(job);
@@ -361,7 +398,10 @@
       turnaround: speed ? speed.short : job.status === "Completed" ? "" : "Open",
       status: `${job.status}${job.confirmation ? ` · ${job.confirmation.status}${job.confirmation.by ? ` (${job.confirmation.by})` : ""}` : ""}`,
       recurring: recurring && recurring.get(job.id) ? `Yes – ${recurring.get(job.id).size} similar` : "",
-      notes: latestNote(job)
+      notes: latestNote(job),
+      safety: job.safety ? "Yes" : "",
+      cost: job.costs ? MH.formatMoney(MH.jobCost(job)) : "",
+      target: targetText(job)
     };
   }
 
@@ -378,7 +418,7 @@
     const kpis = [
       ["Repairs reported", jobs.length], ["Repairs completed", completed.length],
       ["Completed within 2 days", `${speed.quickShare}%`], ["Waiting for staff confirmation", completed.filter((j) => j.confirmation && j.confirmation.status !== "Confirmed").length],
-      ["Recurring issues", groups.length], ["Safety checks overdue", overdue]
+      ["Recurring issues", groups.length], ["Repair spend", MH.formatMoney(spendSummary(jobs).total)]
     ];
     const boxW = (pageW - 24 - 5 * 4) / 6;
     kpis.forEach(([label, value], i) => {
@@ -485,7 +525,10 @@
         ["Visit", job.appointment ? `${MH.formatAppointment(job.appointment)} · ${job.appointment.status}` : "Not booked"],
         ["Team attended", r.attended || "Not yet"], ["Completed", r.completed || "Not yet"], ["Time taken", r.turnaround || ""],
         ["Staff confirmation", job.confirmation ? `${job.confirmation.status}${job.confirmation.by ? ` by ${job.confirmation.by} on ${MH.formatDateTime(job.confirmation.at)}` : ""}` : "Not applicable yet"],
-        ["Recurring issue", recurringInfo ? `Yes – ${recurringInfo.size} similar reports (${recurringInfo.label}): ${recurringInfo.ids.join(", ")}` : "No similar reports found"]
+        ["Recurring issue", recurringInfo ? `Yes – ${recurringInfo.size} similar reports (${recurringInfo.label}): ${recurringInfo.ids.join(", ")}` : "No similar reports found"],
+        ["Resident safety", job.safety ? "Yes – affects resident safety" : "No"],
+        ["Response target", r.target],
+        ["Cost", job.costs ? `${MH.formatMoney(MH.jobCost(job))} (parts ${MH.formatMoney(job.costs.parts)}, labour ${MH.formatMoney(job.costs.labour)})${job.costs.contractor ? ` · ${job.costs.contractor}` : ""}` : "Not recorded"]
       ]
     });
     doc.setFont("helvetica", "bold");
@@ -498,20 +541,181 @@
       body: job.history.map((e) => [MH.formatDateTime(e.timestamp), e.event, e.status || "", e.by || "", [e.detail, e.note].filter(Boolean).join(" — ")]),
       columnStyles: { 0: { cellWidth: 34 }, 4: { cellWidth: 60 } }
     });
+    if (job.photos && job.photos.length && MH.media) {
+      let y = doc.lastAutoTable.finalY + 10;
+      const pageH = doc.internal.pageSize.getHeight();
+      if (y > pageH - 80) { doc.addPage(); y = 20; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(110, 31, 45);
+      doc.text("Photos", 12, y);
+      y += 4;
+      let x = 12;
+      for (const photo of job.photos.slice(0, 8)) {
+        const file = await MH.media.fileDataUrl(photo.id);
+        if (!file || !/^image\//.test(file.type)) continue;
+        const img = new Image();
+        await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; img.src = file.dataUrl; });
+        const w = 44, h = img.naturalWidth ? Math.min(44, w * (img.naturalHeight / img.naturalWidth)) : 33;
+        if (x + w > 198) { x = 12; y += 52; }
+        if (y + h + 8 > pageH - 14) { doc.addPage(); y = 20; x = 12; }
+        doc.addImage(file.dataUrl, "JPEG", x, y, w, h);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(79, 93, 85);
+        doc.text(pdfSafe(MH.media.KIND_LABEL[photo.kind] || "Photo"), x, y + h + 4);
+        x += w + 4;
+      }
+    }
     pdfFooters(doc, `Job report ${job.id}`);
     doc.save(`meadow-house-job-${job.id}.pdf`);
     MH.audit("Report downloaded", `Job report PDF · ${job.id}`);
   }
 
   function historyCsvRows(jobs, recurring) {
-    const header = ["Job ID", "What needs doing", "Where", "Type", "Priority", "Reported on", "Reported by", "Source", "Assigned to", "Visit", "Team attended", "Completed", "Time taken", "Status", "Staff confirmation", "Recurring", "Latest note"];
+    const header = ["Job ID", "What needs doing", "Where", "Type", "Priority", "Resident safety", "Reported on", "Reported by", "Source", "Assigned to", "Visit", "Team attended", "Completed", "Time taken", "Response target", "Cost (GBP)", "Status", "Staff confirmation", "Recurring", "Latest note"];
     return [header, ...jobs.map((job) => {
       const r = jobRow(job, recurring);
-      return [job.id, job.description, job.location || "", job.category || "Other", job.priority, MH.formatDateTime(job.createdAt), job.reporter, job.source || "Staff report",
-        r.assigned, job.appointment ? MH.formatAppointment(job.appointment) : "", r.attended, r.completed, r.turnaround, job.status,
+      return [job.id, job.description, job.location || "", job.category || "Other", job.priority, r.safety, MH.formatDateTime(job.createdAt), job.reporter, job.source || "Staff report",
+        r.assigned, job.appointment ? MH.formatAppointment(job.appointment) : "", r.attended, r.completed, r.turnaround, r.target, job.costs ? MH.jobCost(job).toFixed(2) : "", job.status,
         job.confirmation ? job.confirmation.status : "", r.recurring, r.notes];
     })];
   }
 
-  MH.reports = { monthlyActivity, turnaroundSummary, renderMonthlyChart, renderTurnaround, downloadOverviewReport, downloadJobReport, downloadCsv, historyCsvRows, jobRow };
+  async function downloadEvidencePack({ sinceIso, periodLabel, chartSvg }) {
+    const data = MH.evidenceData(sinceIso);
+    const JsPDF = await loadPdf();
+    const doc = new JsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+    const pageW = doc.internal.pageSize.getWidth();
+    const recurring = MH.findRecurring(data.allJobs);
+    const jobs = data.jobs;
+    const heading = (text) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(110, 31, 45);
+      doc.text(text, 12, 18);
+    };
+
+    // Cover page
+    if (window.MH_LOGO) doc.addImage(window.MH_LOGO.dataUrl, "PNG", pageW / 2 - 30, 22, 60, 60 * (window.MH_LOGO.height / window.MH_LOGO.width), "mh-logo");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(24);
+    doc.setTextColor(110, 31, 45);
+    doc.text("Premises safety and maintenance evidence", pageW / 2, 100, { align: "center" });
+    doc.setFontSize(14);
+    doc.setTextColor(35, 48, 42);
+    doc.text("Meadow House", pageW / 2, 110, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Period: ${periodLabel}`, pageW / 2, 122, { align: "center" });
+    doc.text(`Prepared ${stamp()} by ${MH.user.name} (${MH.ROLES[MH.user.role]})`, pageW / 2, 129, { align: "center" });
+    const contents = ["1. Summary", "2. Safety checks and testing", "3. Certificate register", "4. Repairs, response times and costs", "5. Recurring issues and actions", "6. Planned works notified to staff"];
+    doc.setFontSize(11);
+    contents.forEach((line, i) => doc.text(line, pageW / 2 - 45, 145 + i * 7));
+
+    // 1. Summary
+    doc.addPage();
+    heading("1. Summary");
+    const completed = jobs.filter((j) => j.status === "Completed");
+    const speed = turnaroundSummary(completed);
+    const targets = targetSummary(jobs);
+    const spend = spendSummary(jobs);
+    const certRows = MH.registers ? MH.registers.certificateRows() : [];
+    const certCount = (key) => certRows.filter((r) => r.state.key === key).length;
+    const taskStates = data.tasks.map((t) => MH.taskState(t));
+    doc.autoTable({
+      ...TABLE_STYLE, startY: 24, theme: "grid",
+      columnStyles: { 0: { cellWidth: 110, fontStyle: "bold", fillColor: [246, 241, 230] } },
+      body: [
+        ["Repairs reported in the period", String(jobs.length)],
+        ["Repairs completed", String(completed.length)],
+        ["Completed within 2 days of report", `${speed.quickShare}%`],
+        ["Completed within the response target", targets.share === null ? "No completed repairs yet" : `${targets.share}% of ${targets.known}`],
+        ["Resident safety repairs reported", String(jobs.filter((j) => j.safety).length)],
+        ["Completed repairs confirmed by staff", String(completed.filter((j) => j.confirmation && j.confirmation.status === "Confirmed").length)],
+        ["Repair spend recorded", MH.formatMoney(spend.total)],
+        ["Safety checks up to date", `${taskStates.filter((s) => s.key === "ok" || s.key === "soon").length} of ${data.tasks.length}`],
+        ["Safety checks overdue", String(taskStates.filter((s) => s.key === "overdue").length)],
+        ["Safety checks with no record yet", String(taskStates.filter((s) => s.key === "missing").length)],
+        ["Certificates valid / expiring / expired or missing", `${certCount("valid")} / ${certCount("expiring")} / ${certCount("expired") + certCount("missing")}`]
+      ]
+    });
+    if (chartSvg) {
+      const png = await svgToPng(chartSvg, 640, 280);
+      doc.addImage(png, "PNG", 160, 26, 125, 55);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(79, 93, 85);
+      doc.text("Maintenance done in the last six months (green: repairs, amber: safety checks)", 160, 86);
+    }
+
+    // 2. Safety checks
+    doc.addPage();
+    heading("2. Safety checks and testing");
+    doc.autoTable({
+      ...TABLE_STYLE, startY: 22,
+      head: [["Check", "Category", "How often", "Last done", "Done by", "Next due", "Status", "Booked date"]],
+      body: data.tasks.slice().sort((a, b) => MH.taskState(a).days - MH.taskState(b).days).map((t) => {
+        const s = MH.taskState(t);
+        const last = t.log[t.log.length - 1];
+        return [t.name, t.category, MH.frequencyLabel(t), MH.formatDate(t.lastDone), last && last.by ? last.by : "", MH.formatDate(s.due), s.detail, t.appointment ? `${MH.formatAppointment(t.appointment)} (${t.appointment.status})` : ""];
+      })
+    });
+
+    // 3. Certificates
+    doc.addPage();
+    heading("3. Certificate register");
+    doc.autoTable({
+      ...TABLE_STYLE, startY: 22,
+      head: [["Check", "Certificate", "Number", "Issued", "Expires", "Status", "Engineer / company", "Registration"]],
+      body: certRows.map(({ task, cert, state }) => [task.name, task.certType, cert ? cert.reference : "", cert ? MH.formatDate(cert.issued) : "", cert ? MH.formatDate(cert.expires) : "", `${state.label}${cert ? ` – ${state.detail}` : ""}`, cert ? cert.contractor : "", cert ? cert.registration : ""])
+    });
+
+    // 4. Repairs
+    doc.addPage();
+    heading("4. Repairs, response times and costs");
+    const tRows = Object.entries(targets.byClass).map(([cls, r]) => {
+      const t = data.settings.targets[cls];
+      return [MH.TARGET_LABELS[cls], `${MH.hoursText(t.attend)} / ${MH.hoursText(t.complete)}`, String(r.jobs),
+        r.attendKnown ? `${Math.round((r.attendMet / r.attendKnown) * 100)}% (${r.attendMet}/${r.attendKnown})` : "–",
+        r.completeKnown ? `${Math.round((r.completeMet / r.completeKnown) * 100)}% (${r.completeMet}/${r.completeKnown})` : "–"];
+    });
+    doc.autoTable({ ...TABLE_STYLE, startY: 22, head: [["Type of repair", "Target: attend / complete", "Repairs", "Attended on time", "Completed on time"]], body: tRows });
+    const columns = [["id", "Job"], ["issue", "What and where"], ["priority", "Priority"], ["safety", "Safety"], ["reported", "Reported"], ["attended", "Attended"], ["completed", "Completed"], ["target", "Response target"], ["cost", "Cost"], ["status", "Status / confirmation"], ["notes", "Latest note"]];
+    doc.autoTable({
+      ...TABLE_STYLE, startY: doc.lastAutoTable.finalY + 6,
+      head: [columns.map(([, label]) => label)],
+      body: jobs.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((job) => { const r = jobRow(job, recurring); return columns.map(([key]) => r[key]); }),
+      columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 40 }, 10: { cellWidth: 38 } }
+    });
+
+    // 5. Recurring issues
+    doc.addPage();
+    heading("5. Recurring issues and actions");
+    const inPeriod = new Set(jobs.map((j) => j.id));
+    const groups = [...new Map([...recurring.values()].map((g) => [g.ids.join(), g])).values()].filter((g) => g.ids.some((id) => inPeriod.has(id)));
+    doc.autoTable({
+      ...TABLE_STYLE, startY: 22,
+      head: [["Where / type", "Reports", "Job IDs", "First reported", "Latest reported", "Latest status", "Spend"]],
+      body: groups.length ? groups.map((g) => [g.label, g.size, g.ids.join(", "), MH.formatDate(g.jobs[0].createdAt), MH.formatDate(g.jobs[g.jobs.length - 1].createdAt), g.jobs[g.jobs.length - 1].status, MH.formatMoney(g.jobs.reduce((sum, j) => sum + MH.jobCost(j), 0))])
+        : [["No recurring issues in this period", "", "", "", "", "", ""]]
+    });
+
+    // 6. Planned works
+    doc.addPage();
+    heading("6. Planned works notified to staff");
+    const since = sinceIso ? Date.parse(sinceIso) : 0;
+    const notices = data.announcements.filter((a) => Date.parse(a.createdAt) >= since).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    doc.autoTable({
+      ...TABLE_STYLE, startY: 22,
+      head: [["Posted", "Work", "When", "Where", "Message to staff", "Read by"]],
+      body: notices.length ? notices.map((a) => [MH.formatDateTime(a.createdAt), a.title, MH.formatAppointment(a), a.location || "", a.message, String(Object.keys(a.readBy || {}).length)])
+        : [["No planned works were notified in this period", "", "", "", "", ""]]
+    });
+
+    pdfFooters(doc, "Premises safety and maintenance evidence");
+    doc.save(`meadow-house-evidence-pack-${fileDate()}.pdf`);
+  }
+
+  MH.reports = { loadPdf, pdfSafe, targetSummary, spendSummary, downloadEvidencePack, monthlyActivity, turnaroundSummary, renderMonthlyChart, renderTurnaround, downloadOverviewReport, downloadJobReport, downloadCsv, historyCsvRows, jobRow };
 })();

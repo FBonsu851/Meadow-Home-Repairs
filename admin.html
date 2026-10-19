@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#f6f1e6">
     <title>Admin · Meadow House</title>
@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="styles.css">
     <script src="core.js"></script>
     <script src="reports.js" defer></script>
+    <script src="media.js" defer></script>
     <script src="ui.js" defer></script>
     <script src="admin.js" defer></script>
   </head>
@@ -105,7 +106,7 @@
 
       <section id="panel-system" class="tab-panel" role="tabpanel" aria-labelledby="tab-system" tabindex="0" hidden>
         <h2 class="panel-title">System &amp; data</h2>
-        <p class="section-copy">All records are kept in this browser. Download a backup regularly. Backups contain repairs, safety checks, announcements and the security log, but never accounts or passwords.</p>
+        <p class="section-copy">Download a backup regularly. Backups contain repairs, safety checks, certificates, announcements, settings and the security log, but never accounts or passwords. Photos and certificate files are stored separately on this device.</p>
         <p id="system-feedback" class="form-feedback" role="status" aria-live="polite"></p>
         <dl id="system-facts" class="system-facts"></dl>
         <div class="system-actions">
@@ -116,7 +117,7 @@
           </div>
           <div class="system-card">
             <h3>Restore</h3>
-            <p class="section-copy">Replace the current repairs, checks and announcements with a backup file. Accounts are not changed.</p>
+            <p class="section-copy">Replace the current repairs, checks, announcements and settings with a backup file. Accounts are not changed.</p>
             <label class="file-label" for="restore-file">Choose a backup file</label>
             <input id="restore-file" type="file" accept="application/json,.json">
             <div id="restore-confirm" class="confirm-box" hidden>
@@ -133,16 +134,28 @@
             <button id="sign-out-all" class="button button-secondary" type="button">Sign everyone else out</button>
           </div>
           <div class="system-card">
-            <h3>Sample data</h3>
-            <p class="section-copy">Load or remove six months of fictional history for training and demonstrations.</p>
+            <h3>Training data</h3>
+            <p class="section-copy">Add six months of example repairs and checks for staff training, then remove them before going live. Real records are never changed.</p>
             <div class="toolbar-actions">
-              <button id="load-sample" class="button button-secondary" type="button">Load sample history</button>
-              <button id="remove-sample" class="button button-secondary" type="button">Remove sample history</button>
+              <button id="load-sample" class="button button-secondary" type="button">Add training data</button>
+              <button id="remove-sample" class="button button-secondary" type="button">Remove training data</button>
             </div>
           </div>
         </div>
+        <div class="system-settings">
+          <div class="system-card">
+            <h3>Web address</h3>
+            <p class="section-copy">The secure address where staff open the system, for example https://repairs.meadowhouse.org.uk/. It is printed in room QR codes and email alerts.</p>
+            <div id="url-form-slot"></div>
+          </div>
+          <div class="system-card">
+            <h3>Response targets</h3>
+            <p class="section-copy">Hours from a repair being reported to the team attending and to the work being completed.</p>
+            <div id="targets-form-slot"></div>
+          </div>
+        </div>
       </section>
-      <footer class="page-footer">Meadow House · Records are stored in this browser.</footer>
+      <footer class="page-footer">Meadow House Repairs &amp; Maintenance</footer>
     </main>
   </body>
 </html>

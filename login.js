@@ -53,9 +53,12 @@
     return;
   }
 
+  // Return to the page that sent the user here. Only a room name (from a QR code) is carried over.
   function destination(me) {
-    const next = params.get("next");
-    return next && MH.pageAllowed(next, me.roles) ? next : MH.HOME[me.role];
+    const [page, query] = String(params.get("next") || "").split("?");
+    if (!page || !MH.pageAllowed(page, me.roles)) return MH.HOME[me.role];
+    const room = new URLSearchParams(query || "").get("location");
+    return room ? `${page}?location=${encodeURIComponent(room.slice(0, 80))}` : page;
   }
 
   async function finishSignIn() {
