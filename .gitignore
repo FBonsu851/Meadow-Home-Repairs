@@ -10,3 +10,8 @@ Thumbs.db
 meadow-house-backup-*.json
 .env
 .env.*
+
+# Private account data – never commit
+accounts.local.js
+accounts.input.json
+ACCOUNTS-PRIVATE.md

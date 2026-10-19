@@ -9,6 +9,7 @@
     <title>Sign in · Meadow House</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
     <link rel="stylesheet" href="styles.css">
+    <script src="accounts.local.js"></script>
     <script src="core.js"></script>
     <script src="login.js" defer></script>
   </head>
@@ -24,6 +25,33 @@
         <h1 id="welcome-title" class="welcome-title">Welcome to Meadow House</h1>
 
         <p id="login-message" class="login-message" role="status" aria-live="polite" hidden></p>
+
+        <!-- First-time set-up: no accounts exist yet -->
+        <form id="setup-step" class="login-step" novalidate hidden>
+          <p class="step-copy">Welcome. This system has not been set up yet. Create the administrator account; you can then add everyone else from the Admin page.</p>
+          <div class="field">
+            <label for="setup-name">Your full name</label>
+            <input id="setup-name" type="text" maxlength="120" autocomplete="name" aria-describedby="setup-name-error" aria-required="true">
+            <p class="field-error" id="setup-name-error"></p>
+          </div>
+          <div class="field">
+            <label for="setup-email">Your work email</label>
+            <input id="setup-email" type="email" maxlength="160" autocomplete="email" aria-describedby="setup-email-error" aria-required="true">
+            <p class="field-error" id="setup-email-error"></p>
+          </div>
+          <div class="field">
+            <label for="setup-password">Choose a password</label>
+            <input id="setup-password" type="password" maxlength="200" autocomplete="new-password" aria-describedby="setup-password-hint setup-password-error" aria-required="true">
+            <p id="setup-password-hint" class="field-hint">At least 12 characters, with a letter and a number. Do not use your name, email or common words.</p>
+            <p class="field-error" id="setup-password-error"></p>
+          </div>
+          <div class="field">
+            <label for="setup-confirm">Type the password again</label>
+            <input id="setup-confirm" type="password" maxlength="200" autocomplete="new-password" aria-describedby="setup-confirm-error" aria-required="true">
+            <p class="field-error" id="setup-confirm-error"></p>
+          </div>
+          <button class="button button-primary button-wide" type="submit">Create administrator account</button>
+        </form>
 
         <!-- Step 1: who are you? -->
         <form id="name-step" class="login-step" novalidate>

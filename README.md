@@ -14,26 +14,35 @@ It runs in any modern browser. It needs no installation, plug-ins or internet co
 ## 1. Getting started
 
 1. Open **`login.html`** in Chrome, Edge, Firefox or Safari, or open the web address where the system is hosted (see *Hosting*).
-2. Sign in with your **name or email** and the initial password. The administrator gives you the password privately.
-3. The first time you sign in you **must choose your own password**:
+2. **New installation:** the first screen asks you to create the **administrator account** (name, work email and password). Sign in as the administrator and add everyone else from **Admin → People & passwords**. Each new person gets a temporary password, shown once.
+3. **Installation with prepared accounts:** if the installer supplied a private `accounts.local.js` file (see below), sign in with your **name or work email** and the initial password the administrator gives you privately.
+4. The first time you sign in with a temporary or initial password, you **must choose your own password**:
    - at least 12 characters;
    - include a letter and a number;
    - not your name, your email or common words.
 
    Three or four random words with a number are easy to remember.
 
-### Accounts
+### Preparing accounts in advance (optional)
 
-| Name | Email | Role |
-|---|---|---|
-| Felix Bonsu | sgfbonsu@liverpool.ac.uk | System administrator |
-| Jamie O'Brien | sgjobri6@liverpool.ac.uk | Home manager |
-| Isha Gaikwad | sgigaikw@liverpool.ac.uk | Care staff |
-| Alya Almslem | sgaalmsl@liverpool.ac.uk | Care staff |
-| Testimony Gwendolyne | testimonygwendolyne@gmail.com | Maintenance team |
-| Ethan Morton | sgemort2@liverpool.ac.uk | Maintenance team |
+To open the system with the whole team's accounts already created:
 
-**Initial password:** shared privately by the system administrator (Felix Bonsu). It is not published in this repository and is not stored in the code: the system keeps only a salted PBKDF2-SHA-256 hash (600,000 iterations) of each password.
+1. Create `accounts.input.json` in the project folder:
+   ```json
+   [
+     { "name": "Full Name", "email": "name@example.org", "role": "admin" },
+     { "name": "Full Name", "email": "name@example.org", "role": "manager" },
+     { "name": "Full Name", "email": "name@example.org", "role": "staff" },
+     { "name": "Full Name", "email": "name@example.org", "role": "maintenance" }
+   ]
+   ```
+2. Run `node tools/create-accounts.js accounts.input.json`. You can set `INITIAL_PASSWORD` in the environment; otherwise a strong one is generated.
+3. This writes two **private** files that are listed in `.gitignore` and must never be published:
+   - **`accounts.local.js`**: password hashes only (salted PBKDF2-SHA-256, 600,000 iterations). Place it next to `login.html`.
+   - **`ACCOUNTS-PRIVATE.md`**: the names, emails, roles and initial password, for the administrator.
+4. Give each person their sign-in name and the initial password privately. Everyone must replace the initial password at first sign-in.
+
+No names, emails or passwords are stored in this repository.
 
 ### First-day set-up (administrator and manager)
 
@@ -53,7 +62,7 @@ It runs in any modern browser. It needs no installation, plug-ins or internet co
 
 ## 2. How to use it
 
-### Care staff (Isha, Alya) – **Repairs**
+### Care staff – **Repairs**
 
 - **Report a repair:**
   - Describe the problem, check your name and choose **Normal** or **Urgent**.
@@ -67,7 +76,7 @@ It runs in any modern browser. It needs no installation, plug-ins or internet co
 - **Confirm it's fixed:** completed jobs appear under **Please check these repairs**, and you get an alert. Select **Confirm it's fixed**, or **Not fixed** to reopen the job.
 - **Announcements:** planned work booked by the manager. Select **I've read this**.
 
-### Maintenance team (Testimony, Ethan) – **Maintenance**
+### Maintenance team – **Maintenance**
 
 - **Job board:** columns for each status. Urgent and resident-safety jobs come first, and jobs past their target are marked **⏱ Past target**.
 - On each job:
@@ -81,7 +90,7 @@ It runs in any modern browser. It needs no installation, plug-ins or internet co
   - When recording a check, add the **certificate number, expiry date, engineer or company, registration number (e.g. Gas Safe ID) and the certificate file**.
 - **Certificate register:** every certificate with its status: **Valid**, **Expires soon** (within 30 days) or **Expired / Not recorded**.
 
-### Home manager (Jamie) – **Manager**
+### Home manager – **Manager**
 
 - **Visit dates:** **Accept** or **Change** dates booked by the maintenance team (a reason is required).
 - **Safety checks:** the full schedule; accept or change booked dates.
@@ -92,7 +101,7 @@ It runs in any modern browser. It needs no installation, plug-ins or internet co
   - charts of work done, how quickly repairs were completed, **response targets**, **repair spend** and **recurring issues**;
   - downloads: **PDF report**, **spreadsheet**, and the **Inspection evidence pack (PDF)**. The pack is a ready-made bundle for inspections: summary, safety checks, certificate register, repairs with response times and costs, recurring issues, and planned works notified to staff.
 
-### System administrator (Felix) – **Admin**
+### System administrator – **Admin**
 
 - **People & passwords:**
   - **Add a person** (a temporary password is shown once).
@@ -137,10 +146,10 @@ How alerts reach people:
 The system is a set of static files, so any secure web host works. For example, with **GitHub Pages**:
 
 1. In the repository: **Settings → Pages → Deploy from a branch → `main` / root**.
-2. After a minute it is available at `https://fbonsu851.github.io/Meadow-Home-Repairs/login.html`.
-3. In **Admin → System & data**, set the web address to `https://fbonsu851.github.io/Meadow-Home-Repairs/`.
+2. After a minute it is available at `https://<your-github-username>.github.io/Meadow-Home-Repairs/login.html`.
+3. In **Admin → System & data**, set the web address to `https://<your-github-username>.github.io/Meadow-Home-Repairs/`.
 
-Each browser keeps its own records (accounts, repairs, photos), so the home should use the system on its own shared devices. The administrator should download a backup regularly. Moving to a shared server database is the next step for a multi-device rollout (see *Roadmap*).
+If you use prepared accounts, upload your private `accounts.local.js` to the host as well, but never commit it. Each browser keeps its own records (accounts, repairs, photos), so the home should use the system on its own shared devices. The administrator should download a backup regularly. Moving to a shared server database is the next step for a multi-device rollout (see *Roadmap*).
 
 ---
 
@@ -200,4 +209,5 @@ See [`SECURITY.md`](SECURITY.md) for details and deployment guidance.
 | `registers.js` | Certificate register and room QR codes |
 | `reports.js` | Charts, PDF reports, evidence pack, CSV |
 | `logo-data.js`, `images/` | Logo and sign-in wallpaper |
+| `tools/create-accounts.js` | Creates the private starting-accounts files |
 | `vendor/` | jsPDF, jsPDF-AutoTable and qrcode-generator (MIT licences included) |

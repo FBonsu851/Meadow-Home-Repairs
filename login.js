@@ -30,8 +30,9 @@
     else input.removeAttribute("aria-invalid");
   }
 
+  const setupStep = $("#setup-step");
   function showStep(step) {
-    [nameStep, passwordStep, changeStep].forEach((form) => { form.hidden = form !== step; });
+    [setupStep, nameStep, passwordStep, changeStep].forEach((form) => { form.hidden = form !== step; });
     const first = step.querySelector("input");
     if (first) first.focus();
   }
@@ -180,6 +181,36 @@
     finishSignIn();
   });
 
-  MH.ensureUsers();
-  nameInput.focus();
+  // First-time set-up for a brand-new installation.
+  const setupFields = ["name", "email", "password", "confirm"].map((key) => [key, $(`#setup-${key}`), $(`#setup-${key}-error`)]);
+  setupFields.forEach(([, input, error]) => input.addEventListener("input", () => setError(input, error, "")));
+  setupStep.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const [name, email, password, confirm] = setupFields.map(([, input]) => input.value);
+    const fieldFor = (key) => setupFields.find(([k]) => k === key);
+    if (password !== confirm) {
+      const [, input, error] = fieldFor("confirm");
+      setError(input, error, "The two passwords do not match.");
+      input.focus();
+      return;
+    }
+    const result = await MH.setupFirstAdmin(name, email, password);
+    if (!result.ok) {
+      const [, input, error] = fieldFor(result.field || "name");
+      setError(input, error, result.error);
+      input.focus();
+      return;
+    }
+    chosen = { id: result.user.id, name: result.user.name, role: result.user.role };
+    setupFields.forEach(([, input]) => { input.value = ""; });
+    finishSignIn();
+  });
+
+  MH.ensureUsers().then(() => {
+    if (MH.needsSetup()) {
+      showStep(setupStep);
+    } else {
+      nameInput.focus();
+    }
+  });
 })();

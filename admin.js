@@ -204,7 +204,7 @@
           blankMessage: "Choose who will cover for the manager." },
         { name: "date", type: "date", label: "Cover ends on", required: true, notPast: true, min: MH.toInputDate(new Date()), max: MH.toInputDate(new Date(Date.now() + MH.MAX_ELEVATION_DAYS * 86400000)), value: MH.toInputDate(tomorrow) },
         { name: "time", type: "time", label: "Cover ends at", required: true, optional: false, value: "17:00" },
-        { name: "reason", type: "textarea", label: "Reason", required: true, rows: 2, hint: "For example: Jamie on annual leave.", blankMessage: "Give a reason so the cover can be checked later." }
+        { name: "reason", type: "textarea", label: "Reason", required: true, rows: 2, hint: "For example: Manager on annual leave.", blankMessage: "Give a reason so the cover can be checked later." }
       ],
       onSubmit: (v) => {
         const until = MH.parseInputDate(v.date);
