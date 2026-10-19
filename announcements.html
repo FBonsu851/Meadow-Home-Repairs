@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f6f1e6">
+    <title>Announcements · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="ui.js" defer></script>
+    <script src="announcements.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#list-title">Skip to announcements</a>
+    <header id="site-header" class="site-header"></header>
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <main class="page-shell page-narrow">
+      <p id="page-banner" class="page-banner" role="alert" hidden></p>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">NOTICES FROM THE MANAGER</p>
+          <h1 id="page-title">Announcements</h1>
+          <p class="intro-copy">Planned work in the home that you might not know about: who is coming, when, and what to expect. Select <strong>I've read this</strong> so the manager knows you have seen it.</p>
+        </div>
+      </section>
+
+      <section id="request-section" class="report-panel" aria-labelledby="request-title" hidden>
+        <div class="section-heading">
+          <div class="heading-icon" aria-hidden="true">📣</div>
+          <div>
+            <h2 id="request-title">Request maintenance and tell staff</h2>
+            <p>This books the work with the maintenance team and posts an announcement for all staff.</p>
+          </div>
+        </div>
+        <div id="request-form-slot"></div>
+      </section>
+
+      <section class="jobs-section" aria-labelledby="list-title">
+        <h2 id="list-title" tabindex="-1">Latest announcements</h2>
+        <ol id="announcement-list" class="announcement-list"></ol>
+      </section>
+      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+    </main>
+  </body>
+</html>

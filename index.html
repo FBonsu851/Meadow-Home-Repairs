@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f6f1e6">
+    <title>Repairs · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="ui.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#report-title">Skip to the report form</a>
+    <header id="site-header" class="site-header"></header>
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <main class="page-shell">
+      <p id="page-banner" class="page-banner" role="alert" hidden></p>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">REPAIRS</p>
+          <h1 id="page-title">Good day, <span id="greeting-name"></span></h1>
+          <p class="intro-copy">Report anything that needs fixing, follow its progress, and confirm when it has been done.</p>
+        </div>
+        <a id="announcement-link" class="announcement-pill" href="announcements.html" hidden></a>
+      </section>
+
+      <section id="confirm-section" class="confirm-section" aria-labelledby="confirm-title" hidden>
+        <h2 id="confirm-title">Please check these repairs</h2>
+        <p class="section-copy">The maintenance team says these are finished. Check them, then select <strong>Confirm it's fixed</strong> or <strong>Not fixed</strong>.</p>
+        <ol id="confirm-list" class="jobs-list"></ol>
+      </section>
+
+      <div class="page-grid">
+        <div class="page-main">
+          <section class="report-panel" aria-labelledby="report-title">
+            <div class="section-heading">
+              <div class="heading-icon" aria-hidden="true">＋</div>
+              <div>
+                <h2 id="report-title" tabindex="-1">Report a repair</h2>
+                <p>Describe the problem, check your name, choose a priority, then select Report repair.</p>
+              </div>
+            </div>
+            <form id="report-form" novalidate>
+              <div class="form-grid">
+                <div class="field field-description">
+                  <label for="description">Description of the repair <span class="req">(required)</span></label>
+                  <textarea id="description" name="description" rows="3" maxlength="2000" aria-required="true" aria-describedby="description-error" placeholder="For example: The garden gate latch is loose."></textarea>
+                  <p class="field-error" id="description-error"></p>
+                </div>
+                <div class="field">
+                  <label for="reporter">Reporter name <span class="req">(required)</span></label>
+                  <input id="reporter" name="reporter" type="text" maxlength="120" autocomplete="name" aria-required="true" aria-describedby="reporter-error">
+                  <p class="field-error" id="reporter-error"></p>
+                </div>
+                <fieldset class="priority-field">
+                  <legend>Priority</legend>
+                  <div class="priority-options">
+                    <label class="priority-option">
+                      <input type="radio" name="priority" value="Normal" checked>
+                      <span class="radio-card"><span class="radio-indicator" aria-hidden="true"></span><span><strong>Normal</strong><small>For routine repairs</small></span></span>
+                    </label>
+                    <label class="priority-option urgent-choice">
+                      <input type="radio" name="priority" value="Urgent">
+                      <span class="radio-card"><span class="radio-indicator" aria-hidden="true"></span><span><strong>Urgent</strong><small>Unsafe or needs fixing today</small></span></span>
+                    </label>
+                  </div>
+                </fieldset>
+                <div class="field">
+                  <label for="location">Where is it? <span class="req">(optional)</span></label>
+                  <input id="location" name="location" type="text" maxlength="80" list="location-suggestions" aria-describedby="location-hint">
+                  <p id="location-hint" class="field-hint">For example: Kitchen, Room 12, Garden. This helps spot repeat problems.</p>
+                  <datalist id="location-suggestions">
+                    <option value="Kitchen"></option><option value="Lounge"></option><option value="Dining room"></option>
+                    <option value="Hallway"></option><option value="Garden"></option><option value="Laundry"></option>
+                    <option value="Bathroom 1"></option><option value="Bathroom 2"></option><option value="Office"></option>
+                  </datalist>
+                </div>
+                <div class="field">
+                  <label for="category">Type of problem <span class="req">(optional)</span></label>
+                  <select id="category" name="category"></select>
+                </div>
+              </div>
+              <div class="form-footer">
+                <p class="form-hint">The maintenance team and home manager will see your report straight away.</p>
+                <button class="button button-primary" type="submit"><span aria-hidden="true">＋</span> Report repair</button>
+              </div>
+              <p class="form-feedback" id="report-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+            </form>
+          </section>
+
+          <section class="jobs-section" aria-labelledby="jobs-title">
+            <div class="jobs-heading">
+              <div>
+                <p class="eyebrow">ALL REPAIRS IN THE HOME</p>
+                <h2 id="jobs-title">Repair jobs <span class="job-count" id="job-count">0</span></h2>
+              </div>
+              <label class="filter-label" for="status-filter">Filter by status
+                <select id="status-filter">
+                  <option value="Recent">Open &amp; recent</option>
+                  <option value="All">All jobs</option>
+                  <option value="New">New</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </label>
+            </div>
+            <div id="status-summary" class="status-summary" role="group" aria-label="Show jobs by status"></div>
+            <ol id="jobs-list" class="jobs-list" aria-label="Repair jobs, newest first"></ol>
+            <div id="empty-state" class="empty-state">
+              <h3>No repair jobs yet</h3>
+              <p>When something needs fixing, report it above and it will appear here.</p>
+            </div>
+            <div id="no-filter-results" class="empty-state compact-empty" hidden>
+              <h3>No jobs with this status</h3>
+              <p>Choose another status to see more repair jobs.</p>
+            </div>
+          </section>
+        </div>
+
+        <aside class="upcoming-panel" aria-labelledby="upcoming-title">
+          <p class="eyebrow">COMING UP</p>
+          <h2 id="upcoming-title">Booked visits</h2>
+          <p class="panel-copy">Repairs and safety checks with an agreed date in the next 14 days.</p>
+          <ul id="upcoming-list" class="upcoming-list"></ul>
+          <a class="text-link" href="announcements.html">Read announcements from the manager</a>
+        </aside>
+      </div>
+      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+    </main>
+  </body>
+</html>

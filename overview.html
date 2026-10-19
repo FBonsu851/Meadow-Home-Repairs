@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f6f1e6">
+    <title>Overview &amp; reports · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="logo-data.js" defer></script>
+    <script src="reports.js" defer></script>
+    <script src="ui.js" defer></script>
+    <script src="overview.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#chart-title">Skip to the chart</a>
+    <header id="site-header" class="site-header"></header>
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <main class="page-shell page-wide">
+      <p id="page-banner" class="page-banner" role="alert" hidden></p>
+      <section class="intro report-intro" aria-labelledby="page-title">
+        <img class="report-logo" src="images/logo.png" alt="Meadow House Repairs logo">
+        <div>
+          <p class="eyebrow">OVERVIEW &amp; REPORTS</p>
+          <h1 id="page-title">Maintenance at Meadow House</h1>
+          <p class="intro-copy">What has been done, how quickly, and which problems keep coming back. Download the report as a PDF (with the logo) or as a spreadsheet.</p>
+        </div>
+      </section>
+
+      <div class="report-toolbar">
+        <label class="filter-label" for="period">Report period
+          <select id="period">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 3 months</option>
+            <option value="180" selected>Last 6 months</option>
+            <option value="365">Last 12 months</option>
+            <option value="all">All time</option>
+          </select>
+        </label>
+        <div class="toolbar-actions">
+          <button id="download-pdf" class="button button-primary" type="button">Download report (PDF)</button>
+          <button id="download-csv" class="button button-secondary" type="button">Download spreadsheet (CSV)</button>
+        </div>
+      </div>
+      <p id="download-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+
+      <ul id="kpis" class="stats" aria-label="Key figures for the report period"></ul>
+
+      <div class="overview-grid">
+        <section class="chart-card" aria-labelledby="chart-title">
+          <h2 id="chart-title">Maintenance done in the last six months</h2>
+          <p class="section-copy">Repairs completed and safety checks recorded each month. Hover over or tab to a month for details.</p>
+          <div id="monthly-chart"></div>
+        </section>
+        <section class="chart-card" aria-labelledby="speed-title">
+          <h2 id="speed-title">How quickly repairs were completed</h2>
+          <p class="section-copy">Time from the report to completion, for repairs completed in the report period.</p>
+          <div id="turnaround-chart" class="hbar-chart"></div>
+          <p id="speed-summary" class="speed-summary"></p>
+        </section>
+      </div>
+
+      <section class="report-section" aria-labelledby="recurring-title">
+        <h2 id="recurring-title">Recurring issues</h2>
+        <p class="section-copy">Similar problems reported more than once within about four months: same place and type, or the same key words.</p>
+        <ul id="recurring-list" class="recurring-list"></ul>
+      </section>
+
+      <section class="report-section" aria-labelledby="history-title">
+        <div class="jobs-heading">
+          <h2 id="history-title">Repair history</h2>
+          <label class="filter-label" for="history-status">Show
+            <select id="history-status">
+              <option value="all">All repairs</option>
+              <option value="Completed">Completed</option>
+              <option value="open">Still open</option>
+            </select>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table history-table" id="history-table">
+            <caption class="visually-hidden">Repair history for the report period</caption>
+            <thead>
+              <tr><th scope="col">Job</th><th scope="col">What and where</th><th scope="col">Reported</th><th scope="col">Assigned to</th><th scope="col">Team attended</th><th scope="col">Completed</th><th scope="col">Time taken</th><th scope="col">Status</th><th scope="col">Latest note</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sample-section" class="report-section sample-section" aria-labelledby="sample-title" hidden>
+        <h2 id="sample-title">Demo data</h2>
+        <p class="section-copy">Load six months of fictional completed repairs and safety checks to see the charts and recurring issues working. You can remove them again at any time.</p>
+        <div class="toolbar-actions">
+          <button id="load-sample" class="button button-secondary" type="button">Load sample history</button>
+          <button id="remove-sample" class="button button-secondary" type="button">Remove sample history</button>
+        </div>
+      </section>
+      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+    </main>
+  </body>
+</html>

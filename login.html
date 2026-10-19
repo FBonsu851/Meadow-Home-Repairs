@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#1e2a22">
+    <title>Sign in · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="login.js" defer></script>
+  </head>
+  <body class="login-page">
+    <div class="lock-clock" aria-hidden="true">
+      <p id="clock-time" class="clock-time"></p>
+      <p id="clock-date" class="clock-date"></p>
+    </div>
+
+    <main class="login-shell">
+      <section class="login-card" aria-labelledby="welcome-title">
+        <img class="login-logo" src="images/logo.png" alt="Meadow House Repairs logo">
+        <h1 id="welcome-title" class="welcome-title">Welcome to Meadow House</h1>
+
+        <p id="login-message" class="login-message" role="status" aria-live="polite" hidden></p>
+
+        <!-- Step 1: who are you? -->
+        <form id="name-step" class="login-step" novalidate>
+          <p class="step-copy">Sign in with your name or work email. We'll take you to the right place for your job.</p>
+          <div class="field">
+            <label for="staff-name">Your full name or email</label>
+            <input id="staff-name" name="staff-name" type="text" maxlength="120" autocomplete="username" aria-describedby="staff-name-error" aria-required="true">
+            <p class="field-error" id="staff-name-error"></p>
+          </div>
+          <button class="button button-primary button-wide" type="submit">Next <span aria-hidden="true">→</span></button>
+        </form>
+
+        <!-- Step 2: password -->
+        <form id="password-step" class="login-step" novalidate hidden>
+          <div class="user-tile">
+            <span id="user-initials" class="user-avatar" aria-hidden="true"></span>
+            <div>
+              <p id="user-name" class="user-tile-name"></p>
+              <p id="user-role" class="user-tile-role"></p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input id="password" name="password" type="password" maxlength="200" autocomplete="current-password" aria-describedby="password-error" aria-required="true">
+              <button id="toggle-password" class="button button-secondary button-small" type="button" aria-pressed="false" aria-controls="password">Show</button>
+            </div>
+            <p class="field-error" id="password-error"></p>
+          </div>
+          <button id="sign-in-button" class="button button-primary button-wide" type="submit">Sign in</button>
+          <button id="switch-user" class="button button-link" type="button">Not you? Use a different name</button>
+        </form>
+
+        <!-- Step 3: must choose a new password (after a manager reset) -->
+        <form id="change-step" class="login-step" novalidate hidden>
+          <p class="step-copy">You signed in with a temporary password. Please choose your own password to continue. Only you will know it.</p>
+          <div class="field">
+            <label for="new-password">New password</label>
+            <input id="new-password" type="password" maxlength="200" autocomplete="new-password" aria-describedby="new-password-hint new-password-error" aria-required="true">
+            <p id="new-password-hint" class="field-hint">At least 12 characters, with a letter and a number. Do not use your name, email or common words. Three or four random words with a number is easy to remember.</p>
+            <p class="field-error" id="new-password-error"></p>
+          </div>
+          <div class="field">
+            <label for="confirm-password">Type the new password again</label>
+            <input id="confirm-password" type="password" maxlength="200" autocomplete="new-password" aria-describedby="confirm-password-error" aria-required="true">
+            <p class="field-error" id="confirm-password-error"></p>
+          </div>
+          <button class="button button-primary button-wide" type="submit">Save password and sign in</button>
+        </form>
+
+        <p class="login-note">First time here? Use the temporary password from your administrator, then choose your own. Each browser tab signs in separately and you are signed out after 15 minutes without activity.</p>
+      </section>
+    </main>
+  </body>
+</html>

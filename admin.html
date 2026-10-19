@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f6f1e6">
+    <title>Admin · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="reports.js" defer></script>
+    <script src="ui.js" defer></script>
+    <script src="admin.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#admin-tabs">Skip to administration</a>
+    <header id="site-header" class="site-header"></header>
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <main class="page-shell page-wide">
+      <p id="page-banner" class="page-banner" role="alert" hidden></p>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">SYSTEM ADMINISTRATION</p>
+          <h1 id="page-title">Admin</h1>
+          <p class="intro-copy">Add and remove people, reset passwords, arrange cover for the manager, check the security log and look after the system's data.</p>
+        </div>
+      </section>
+
+      <ul id="stats" class="stats" aria-label="System at a glance"></ul>
+
+      <div id="admin-tabs" class="tabs" role="tablist" aria-label="Administration">
+        <button class="tab" role="tab" id="tab-users" aria-controls="panel-users" aria-selected="true">People &amp; passwords</button>
+        <button class="tab" role="tab" id="tab-cover" aria-controls="panel-cover" aria-selected="false" tabindex="-1">Cover for manager</button>
+        <button class="tab" role="tab" id="tab-security" aria-controls="panel-security" aria-selected="false" tabindex="-1">Security log</button>
+        <button class="tab" role="tab" id="tab-system" aria-controls="panel-system" aria-selected="false" tabindex="-1">System &amp; data</button>
+      </div>
+
+      <section id="panel-users" class="tab-panel" role="tabpanel" aria-labelledby="tab-users" tabindex="0">
+        <div class="jobs-heading">
+          <h2 class="panel-title">People who can sign in</h2>
+          <button id="add-account" class="button button-primary" type="button">Add a person</button>
+        </div>
+        <p class="section-copy">Each person only sees the pages for their role. New people and password resets get a <strong>temporary password</strong>, shown once here. They must choose their own password the first time they sign in. Resetting, changing a role, disabling or removing someone signs them out straight away.</p>
+        <div id="account-form-slot"></div>
+        <div id="temp-password" class="temp-password" hidden>
+          <h3 class="subheading">Temporary password</h3>
+          <p id="temp-password-for" class="section-copy"></p>
+          <p class="temp-password-value"><code id="temp-password-value"></code></p>
+          <div class="toolbar-actions">
+            <button id="copy-password" class="button button-secondary" type="button">Copy password</button>
+            <button id="hide-password" class="button button-secondary" type="button">I've passed it on – hide it</button>
+          </div>
+          <p class="field-hint">Give it to the person privately (in person or by phone). Do not send it in the same email as their sign-in name. It is not stored anywhere and cannot be shown again.</p>
+        </div>
+        <p id="account-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table class="data-table" id="accounts-table">
+            <caption class="visually-hidden">People who can sign in</caption>
+            <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Last sign-in</th><th scope="col">Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="panel-cover" class="tab-panel" role="tabpanel" aria-labelledby="tab-cover" tabindex="0" hidden>
+        <h2 class="panel-title">Cover for the manager</h2>
+        <p class="section-copy">When the manager is away, a care worker or maintenance team member can be given the manager's access for a set time (up to 14 days). They keep their own pages too. Cover ends automatically at the time you choose, or you can end it early. Everything they do is recorded in the security log.</p>
+        <div id="cover-form-slot"></div>
+        <h3 class="subheading">Current and past cover</h3>
+        <div class="table-wrap">
+          <table class="data-table" id="cover-table">
+            <caption class="visually-hidden">Cover for the manager</caption>
+            <thead><tr><th scope="col">Person</th><th scope="col">Usual role</th><th scope="col">Covering until</th><th scope="col">Reason</th><th scope="col">Granted by</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="panel-security" class="tab-panel" role="tabpanel" aria-labelledby="tab-security" tabindex="0" hidden>
+        <div class="jobs-heading">
+          <h2 class="panel-title">Security log</h2>
+          <div class="toolbar-actions">
+            <label class="filter-label" for="audit-filter">Show
+              <select id="audit-filter">
+                <option value="all">All events</option>
+                <option value="blocked">Blocked or failed only</option>
+                <option value="accounts">Sign-ins and account changes</option>
+              </select>
+            </label>
+            <button id="audit-csv" class="button button-secondary" type="button">Download log (CSV)</button>
+          </div>
+        </div>
+        <p class="section-copy">Sign-ins, wrong passwords, locked accounts, blocked pages and actions, account changes, cover and downloads. The latest 1,000 events are kept; download the log regularly to keep a longer record.</p>
+        <div class="table-wrap">
+          <table class="data-table" id="audit-table">
+            <caption class="visually-hidden">Security log</caption>
+            <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Details</th><th scope="col">Result</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="panel-system" class="tab-panel" role="tabpanel" aria-labelledby="tab-system" tabindex="0" hidden>
+        <h2 class="panel-title">System &amp; data</h2>
+        <p class="section-copy">All records are kept in this browser. Download a backup regularly. Backups contain repairs, safety checks, announcements and the security log, but never accounts or passwords.</p>
+        <p id="system-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        <dl id="system-facts" class="system-facts"></dl>
+        <div class="system-actions">
+          <div class="system-card">
+            <h3>Backup</h3>
+            <p class="section-copy">Save a copy of all records as a file.</p>
+            <button id="backup" class="button button-primary" type="button">Download backup</button>
+          </div>
+          <div class="system-card">
+            <h3>Restore</h3>
+            <p class="section-copy">Replace the current repairs, checks and announcements with a backup file. Accounts are not changed.</p>
+            <label class="file-label" for="restore-file">Choose a backup file</label>
+            <input id="restore-file" type="file" accept="application/json,.json">
+            <div id="restore-confirm" class="confirm-box" hidden>
+              <p id="restore-summary"></p>
+              <div class="toolbar-actions">
+                <button id="restore-yes" class="button button-primary" type="button">Yes, restore this backup</button>
+                <button id="restore-no" class="button button-secondary" type="button">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <div class="system-card">
+            <h3>Sessions</h3>
+            <p class="section-copy">Sign everyone else out, for example after a security concern. They can sign straight back in.</p>
+            <button id="sign-out-all" class="button button-secondary" type="button">Sign everyone else out</button>
+          </div>
+          <div class="system-card">
+            <h3>Sample data</h3>
+            <p class="section-copy">Load or remove six months of fictional history for training and demonstrations.</p>
+            <div class="toolbar-actions">
+              <button id="load-sample" class="button button-secondary" type="button">Load sample history</button>
+              <button id="remove-sample" class="button button-secondary" type="button">Remove sample history</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <footer class="page-footer">Meadow House · Records are stored in this browser.</footer>
+    </main>
+  </body>
+</html>

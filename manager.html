@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f6f1e6">
+    <title>Manager · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="logo-data.js" defer></script>
+    <script src="reports.js" defer></script>
+    <script src="ui.js" defer></script>
+    <script src="manager.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#tabs">Skip to manager tasks</a>
+    <header id="site-header" class="site-header"></header>
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <main class="page-shell page-wide">
+      <p id="page-banner" class="page-banner" role="alert" hidden></p>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">HOME MANAGER</p>
+          <h1 id="page-title">Manager overview</h1>
+          <p class="intro-copy">Approve or change visit dates and keep an eye on every repair and safety check. Staff accounts are looked after by the system administrator.</p>
+        </div>
+        <p class="live-note"><span class="live-dot" aria-hidden="true"></span> Updates automatically</p>
+      </section>
+
+      <ul id="stats" class="stats" aria-label="At a glance"></ul>
+
+      <div id="tabs" class="tabs" role="tablist" aria-label="Manager tasks">
+        <button class="tab" role="tab" id="tab-appointments" aria-controls="panel-appointments" aria-selected="true">Visit dates</button>
+        <button class="tab" role="tab" id="tab-checks" aria-controls="panel-checks" aria-selected="false" tabindex="-1">Safety checks</button>
+      </div>
+
+      <section id="panel-appointments" class="tab-panel" role="tabpanel" aria-labelledby="tab-appointments" tabindex="0">
+        <h2 class="panel-title">Visits waiting for your decision</h2>
+        <p class="section-copy">The maintenance team has booked these dates. <strong>Accept</strong> them, or <strong>change</strong> the date and give a reason.</p>
+        <div id="pending-list" class="pending-list"></div>
+        <h2 class="panel-title">Agreed visits – next 30 days</h2>
+        <ul id="agreed-list" class="agenda"></ul>
+        <p class="section-copy">To see every repair and its history, open <a class="text-link" href="index.html">Repairs</a>. To request work and tell staff about it, open <a class="text-link" href="announcements.html">Announcements</a>.</p>
+      </section>
+
+      <section id="panel-checks" class="tab-panel" role="tabpanel" aria-labelledby="tab-checks" tabindex="0" hidden>
+        <div class="jobs-heading">
+          <h2 class="panel-title">Safety checks &amp; testing schedule</h2>
+          <label class="filter-label" for="task-filter">Show
+            <select id="task-filter">
+              <option value="all">All checks</option>
+              <option value="attention">Overdue or due soon</option>
+              <option value="booked">Booked dates</option>
+            </select>
+          </label>
+        </div>
+        <p class="section-copy">Gas, electrical, fire, water, lifting and resident safety checks. Intervals are typical examples for this fictional demo; always follow your own risk assessments and current regulations.</p>
+        <div id="task-groups" class="task-groups"></div>
+      </section>
+
+      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+    </main>
+  </body>
+</html>

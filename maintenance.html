@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f6f1e6">
+    <title>Maintenance dashboard · Meadow House</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=IM+Fell+English:ital@0;1&amp;display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="core.js"></script>
+    <script src="logo-data.js" defer></script>
+    <script src="reports.js" defer></script>
+    <script src="ui.js" defer></script>
+    <script src="dashboard.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#board-title">Skip to the job board</a>
+    <header id="site-header" class="site-header"></header>
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <main class="page-shell page-wide">
+      <p id="page-banner" class="page-banner" role="alert" hidden></p>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">MAINTENANCE TEAM</p>
+          <h1 id="page-title">Maintenance dashboard</h1>
+          <p class="intro-copy">Repairs reported by staff and requested by the manager, plus the home's planned safety checks. Book a visit, record when you attend, and complete each job with a note.</p>
+        </div>
+        <p class="live-note"><span class="live-dot" aria-hidden="true"></span> Updates automatically</p>
+      </section>
+
+      <ul id="stats" class="stats" aria-label="At a glance"></ul>
+
+      <section class="board-section" aria-labelledby="board-title">
+        <div class="jobs-heading">
+          <div>
+            <p class="eyebrow">REPAIR JOBS</p>
+            <h2 id="board-title" tabindex="-1">Job board</h2>
+          </div>
+          <label class="filter-label" for="job-scope">Show
+            <select id="job-scope">
+              <option value="all">All jobs</option>
+              <option value="mine">Assigned to me</option>
+              <option value="unassigned">Not assigned yet</option>
+            </select>
+          </label>
+        </div>
+        <div id="board" class="board"></div>
+      </section>
+
+      <section class="planned-section" aria-labelledby="planned-title">
+        <div class="jobs-heading">
+          <div>
+            <p class="eyebrow">PLANNED MAINTENANCE</p>
+            <h2 id="planned-title" tabindex="-1">Safety checks &amp; testing</h2>
+          </div>
+          <label class="filter-label" for="task-filter">Show
+            <select id="task-filter">
+              <option value="attention">Overdue or due soon</option>
+              <option value="mine">Assigned to me</option>
+              <option value="all">All checks</option>
+            </select>
+          </label>
+        </div>
+        <p class="section-copy">Gas, electrical, fire, water, lifting and resident safety checks. Book a date (the manager approves it), then record the check when done. Intervals are typical examples for this fictional demo.</p>
+        <div id="task-groups" class="task-groups"></div>
+      </section>
+      <footer class="page-footer">Meadow House · Fictional demo data · Records are stored in this browser.</footer>
+    </main>
+  </body>
+</html>
